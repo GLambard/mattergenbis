@@ -33,6 +33,10 @@ def main(
     guidance: dict | None = None,
     diffusion_loss_weight: float = 1.0,
     print_loss: bool = False,
+    # NEW: Performance optimization options
+    enable_optimizations: bool = True,
+    enable_mixed_precision: bool = True,
+    enable_model_compilation: bool = True,
 ):
     """
     Evaluate diffusion model against molecular metrics.
@@ -116,15 +120,17 @@ def main(
         diffusion_loss_fn=loss_fn,           # NEW
         diffusion_loss_weight=diffusion_loss_weight,   # NEW
         print_loss=print_loss,  # NEW
+        # NEW: Performance optimization settings
+        enable_performance_optimizations=enable_optimizations,
+        enable_mixed_precision=enable_mixed_precision,
+        enable_model_compilation=enable_model_compilation,
     )
     generator.generate(output_dir=Path(output_path))
 
 
 def _main():
-    # use fire instead of argparse to allow for the specification of dictionary values via the CLI
-    #fire.Fire(main)
-    #this line is for debugging purposes, to run the script directly
-    fire.Fire(main, command='"results/chemical_system/Pd-Ni-H_guided"   --pretrained-name=chemical_system   --batch_size=400   --properties_to_condition_on="{\'chemical_system\':\'Pd-Ni-H\'}"   --record_trajectories=False   --diffusion_guidance_factor=2.0   --guidance="{\'volume\': 30.935}"   --diffusion_loss_weight=1.0   --print_loss=True')
+    # Use fire to allow for the specification of dictionary values via the CLI
+    fire.Fire(main)
 
 
 if __name__ == "__main__":

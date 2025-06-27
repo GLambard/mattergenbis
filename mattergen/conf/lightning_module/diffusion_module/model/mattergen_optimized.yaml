@@ -1,0 +1,23 @@
+# Optimized GemNet configuration for faster inference
+# Reduces model complexity while maintaining quality
+
+defaults:
+  - base_gemnet
+  - _self_
+
+# Reduced model parameters for speed
+num_blocks: 2  # Reduced from 3
+emb_size_atom: 256  # Reduced from 512
+emb_size_edge: 256  # Reduced from 512
+emb_size_trip: 32   # Reduced from 64
+emb_size_rbf: 12    # Reduced from 16
+emb_size_cbf: 12    # Reduced from 16
+emb_size_bil_trip: 32  # Reduced from 64
+
+# Reduced neighbor finding for speed
+cutoff: 5.0  # Reduced from 6.0
+max_neighbors: 30  # Reduced from 50
+
+# Optimize for inference
+otf_graph: true  # Enable on-the-fly graph construction
+efficient: true  # Enable efficient mode

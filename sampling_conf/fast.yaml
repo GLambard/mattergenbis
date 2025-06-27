@@ -1,0 +1,27 @@
+sampler_partial:
+  _target_: mattergen.diffusion.sampling.classifier_free_guidance.GuidedPredictorCorrector.from_pl_module
+  N: 100  # Aggressive reduction for maximum speed
+  eps_t: ${eval:'1/${.N}'}
+  _partial_: true
+  guidance_scale: 0.0
+  
+  # Simplified predictors only
+  predictor_partials:
+    pos:
+      _target_: mattergen.diffusion.wrapped.wrapped_predictors_correctors.WrappedAncestralSamplingPredictor
+      _partial_: true
+    cell:
+      _target_: mattergen.common.diffusion.predictors_correctors.LatticeAncestralSamplingPredictor
+      _partial_: true
+    atomic_numbers:
+      _target_: mattergen.diffusion.d3pm.d3pm_predictors_correctors.D3PMAncestralSamplingPredictor
+      predict_x0: True
+      _partial_: true
+
+  # Disable correctors for speed
+  corrector_partials: {}
+  n_steps_corrector: 0
+
+condition_loader_partial:
+  _partial_: true
+  _target_: mattergen.common.data.condition_factory.get_number_of_atoms_condition_loader

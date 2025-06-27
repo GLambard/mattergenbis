@@ -31,6 +31,8 @@ from mattergen.common.utils.eval_utils import (
     save_structures,
 )
 from mattergen.common.utils.globals import DEFAULT_SAMPLING_CONFIG_PATH, get_device
+# NEW: Import performance optimizations
+from mattergen.common.utils.performance_optimizer import apply_generation_optimizations
 from mattergen.diffusion.lightning_module import DiffusionLightningModule
 from mattergen.diffusion.sampling.pc_sampler import PredictorCorrector
 
@@ -205,6 +207,11 @@ class CrystalGenerator:
     diffusion_loss_weight: float = 1.0         # NEW
     print_loss: bool = False # NEW
    
+    # NEW: Performance optimization settings
+    enable_performance_optimizations: bool = True
+    enable_mixed_precision: bool = True
+    enable_model_compilation: bool = True
+    memory_cleanup_frequency: int = 10  # Clear cache every N batches
 
     # Additional overrides, only has an effect when using a diffusion-codebase model
     sampling_config_overrides: list[str] | None = None
@@ -357,6 +364,16 @@ class CrystalGenerator:
             return
         model = load_model_diffusion(self.checkpoint_info)
         model = model.to(get_device())
+        
+        # NEW: Apply performance optimizations
+        if self.enable_performance_optimizations:
+            model = apply_generation_optimizations(
+                model, 
+                enable_fp16=self.enable_mixed_precision, 
+                compile_model=self.enable_model_compilation, 
+                optimize_memory=True
+            )
+        
         self._model = model
         self._cfg = self.checkpoint_info.config
 

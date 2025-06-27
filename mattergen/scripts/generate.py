@@ -33,10 +33,18 @@ def main(
     guidance: dict | None = None,
     diffusion_loss_weight: float = 1.0,
     print_loss: bool = False,
-    # NEW: Performance optimization options
+    # NEW: Performance optimization options (Phase 2 & 3)
     enable_optimizations: bool = True,
     enable_mixed_precision: bool = True,
     enable_model_compilation: bool = True,
+    # Phase 3 options
+    enable_multi_gpu: bool = True,
+    enable_graph_caching: bool = True,
+    enable_gradient_checkpointing: bool = False,
+    multi_gpu_strategy: str = "auto",  # "auto", "dp", "ddp", "single"
+    max_gpus: int | None = None,
+    max_memory_usage_gb: float | None = None,
+    print_optimization_info: bool = False,
 ):
     """
     Evaluate diffusion model against molecular metrics.
@@ -104,6 +112,11 @@ def main(
         # Create the combined loss function based on the provided guidance
         loss_fn = make_combined_loss(guidance)
 
+    # NEW: Print optimization info if requested
+    if print_optimization_info:
+        from mattergen.common.utils.performance_optimizer import print_optimization_info
+        print_optimization_info()
+
     generator = CrystalGenerator(
         checkpoint_info=checkpoint_info,
         properties_to_condition_on=properties_to_condition_on,
@@ -120,12 +133,33 @@ def main(
         diffusion_loss_fn=loss_fn,           # NEW
         diffusion_loss_weight=diffusion_loss_weight,   # NEW
         print_loss=print_loss,  # NEW
-        # NEW: Performance optimization settings
+        # Performance optimization settings (Phase 2 & 3)
         enable_performance_optimizations=enable_optimizations,
         enable_mixed_precision=enable_mixed_precision,
         enable_model_compilation=enable_model_compilation,
+        enable_multi_gpu=enable_multi_gpu,
+        enable_graph_caching=enable_graph_caching,
+        enable_gradient_checkpointing=enable_gradient_checkpointing,
+        multi_gpu_strategy=multi_gpu_strategy,
+        max_gpus=max_gpus,
+        max_memory_usage_gb=max_memory_usage_gb,
     )
-    generator.generate(output_dir=Path(output_path))
+    
+    try:
+        generated_structures = generator.generate(output_dir=Path(output_path))
+        
+        # Print final optimization stats
+        if print_optimization_info:
+            print("\nFinal Optimization Statistics:")
+            opt_info = generator.get_optimization_info()
+            for key, value in opt_info.items():
+                print(f"  {key}: {value}")
+        
+        print(f"\nGeneration complete! Generated {len(generated_structures)} structures.")
+        
+    finally:
+        # Clean up resources
+        generator.cleanup()
 
 
 def _main():

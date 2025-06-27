@@ -1,0 +1,31 @@
+# MatterGen Phase 3 Optimized Sampling Configuration
+# Includes multi-GPU support, advanced caching, and hardware-specific optimizations
+
+# Sample with aggressive optimizations for maximum speed
+N: 50  # Reduced diffusion steps for speed
+
+# Predictor settings
+# Number of denoising layers, i.e., the number of timesteps
+predictor:
+  _target_: mattergen.diffusion.sampling.predictor.EulerMaruyama 
+  num_steps: 50  # Match N for consistency
+
+# Corrector settings - disabled for speed
+corrector:
+  _target_: mattergen.diffusion.sampling.corrector.AnnealedLangevin
+  num_steps: 0  # Disabled for maximum speed
+  delta_t: 1.e-3
+
+sampler_partial:
+  _target_: mattergen.diffusion.sampling.pc_sampler.PredictorCorrector
+  predictor_partials:
+    pos: ${predictor}
+    atom_types:
+      _target_: mattergen.diffusion.sampling.predictor.EulerMaruyama
+      num_steps: ${N}
+    cell: ${predictor}
+  corrector_partials: {}  # No correctors for speed
+
+# Condition loader - removed conflicting settings, will be set by generator
+condition_loader_partial:
+  _target_: mattergen.common.data.condition_factory.get_number_of_atoms_condition_loader

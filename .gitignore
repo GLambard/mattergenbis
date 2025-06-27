@@ -403,3 +403,13 @@ FodyWeavers.xsd
 
 # Virtual environment
 .venv/
+
+# test results
+*_test*/
+
+# demo
+*_demo*/
+
+# Benchmark results
+benchmark_results/
+

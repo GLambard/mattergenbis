@@ -31,10 +31,55 @@ from mattergen.common.utils.eval_utils import (
     save_structures,
 )
 from mattergen.common.utils.globals import DEFAULT_SAMPLING_CONFIG_PATH, get_device
-# NEW: Import performance optimizations
-from mattergen.common.utils.performance_optimizer import apply_generation_optimizations
+# Performance optimizations (Phase 2 & 3)
+from mattergen.common.utils.performance_optimizer import (
+    apply_generation_optimizations, 
+    apply_all_optimizations, 
+    OptimizationConfig,
+    PerformanceOptimizer
+)
 from mattergen.diffusion.lightning_module import DiffusionLightningModule
 from mattergen.diffusion.sampling.pc_sampler import PredictorCorrector
+
+
+def _get_unwrapped_module(model):
+    """
+    Get the underlying module from a potentially wrapped model.
+    Handles DataParallel, DistributedDataParallel, and other wrappers.
+    """
+    # Check for common wrapper attributes
+    if hasattr(model, 'module'):
+        return model.module
+    elif hasattr(model, '_orig_mod'):  # torch.compile wrapper
+        return model._orig_mod
+    else:
+        return model
+
+
+def _get_diffusion_module(sampler_or_model):
+    """
+    Safely get the diffusion module from a sampler or model, handling multi-GPU wrappers.
+    """
+    if hasattr(sampler_or_model, 'diffusion_module'):
+        # Direct access (single GPU case)
+        return sampler_or_model.diffusion_module
+    elif hasattr(sampler_or_model, 'pl_module'):
+        # Sampler case - get from pl_module
+        pl_module = sampler_or_model.pl_module
+        unwrapped = _get_unwrapped_module(pl_module)
+        if hasattr(unwrapped, 'diffusion_module'):
+            return unwrapped.diffusion_module
+    
+    # Try to unwrap the module and access diffusion_module
+    unwrapped = _get_unwrapped_module(sampler_or_model)
+    if hasattr(unwrapped, 'diffusion_module'):
+        return unwrapped.diffusion_module
+    
+    # Last resort - check if the object itself is a diffusion module
+    if hasattr(sampler_or_model, 'model') and hasattr(sampler_or_model, 'corruption'):
+        return sampler_or_model
+    
+    raise AttributeError(f"Could not find diffusion_module in {type(sampler_or_model)}")
 
 
 def draw_samples_from_sampler(
@@ -50,12 +95,15 @@ def draw_samples_from_sampler(
     # Dict
     properties_to_condition_on = properties_to_condition_on or {}
 
+    # Get diffusion module safely (handles multi-GPU wrappers)
+    diffusion_module = _get_diffusion_module(sampler)
+
     # we cannot conditional sample on something on which the model was not trained to condition on
-    assert all([key in sampler.diffusion_module.model.cond_fields_model_was_trained_on for key in properties_to_condition_on.keys()])  # type: ignore
+    assert all([key in diffusion_module.model.cond_fields_model_was_trained_on for key in properties_to_condition_on.keys()])  # type: ignore
 
     all_samples_list = []
     all_trajs_list = []
-    sampler.diffusion_module.print_loss_history = print_loss  # NEW
+    diffusion_module.print_loss_history = print_loss  # NEW
 
     for conditioning_data, mask in tqdm(condition_loader, desc="Generating samples"):
 
@@ -73,11 +121,11 @@ def draw_samples_from_sampler(
 
     # Save and print the diffusion loss history
     if print_loss:
-        sampler.diffusion_module.save_diffusion_loss_history(
+        diffusion_module.save_diffusion_loss_history(
             output_path / "diffusion_loss_history.txt"
         )
         plt.figure(figsize=(8, 4))
-        plt.plot(sampler.diffusion_module.diffusion_loss_history, label="Diffusion Loss")
+        plt.plot(diffusion_module.diffusion_loss_history, label="Diffusion Loss")
         plt.xlabel("Step")
         plt.ylabel("Diffusion Loss")
         plt.title("Diffusion Loss History")
@@ -207,11 +255,19 @@ class CrystalGenerator:
     diffusion_loss_weight: float = 1.0         # NEW
     print_loss: bool = False # NEW
    
-    # NEW: Performance optimization settings
+    # NEW: Performance optimization settings (Phase 2 & 3)
     enable_performance_optimizations: bool = True
     enable_mixed_precision: bool = True
     enable_model_compilation: bool = True
     memory_cleanup_frequency: int = 10  # Clear cache every N batches
+    
+    # Phase 3: Multi-GPU and advanced optimizations
+    enable_multi_gpu: bool = True
+    enable_graph_caching: bool = True
+    enable_gradient_checkpointing: bool = False
+    multi_gpu_strategy: str = "auto"  # "auto", "dp", "ddp", "single"
+    max_gpus: int | None = None
+    max_memory_usage_gb: float | None = None
 
     # Additional overrides, only has an effect when using a diffusion-codebase model
     sampling_config_overrides: list[str] | None = None
@@ -229,6 +285,7 @@ class CrystalGenerator:
     # These attributes are set when prepare() method is called.
     _model: DiffusionLightningModule | None = None
     _cfg: DictConfig | None = None
+    _optimizer: PerformanceOptimizer | None = None  # Phase 3: Track optimizer instance
 
     def __post_init__(self) -> None:
         assert self.num_atoms_distribution in NUM_ATOMS_DISTRIBUTIONS, (
@@ -365,8 +422,41 @@ class CrystalGenerator:
         model = load_model_diffusion(self.checkpoint_info)
         model = model.to(get_device())
         
-        # NEW: Apply performance optimizations
+        # NEW: Apply performance optimizations (Phase 2 & 3)
         if self.enable_performance_optimizations:
+            # Create optimization config
+            opt_config = OptimizationConfig(
+                enable_mixed_precision=self.enable_mixed_precision,
+                enable_model_compilation=self.enable_model_compilation,
+                enable_memory_optimization=True,
+                enable_multi_gpu=self.enable_multi_gpu,
+                enable_graph_caching=self.enable_graph_caching,
+                enable_gradient_checkpointing=self.enable_gradient_checkpointing,
+                multi_gpu_strategy=self.multi_gpu_strategy,
+                max_gpus=self.max_gpus,
+                memory_cleanup_frequency=self.memory_cleanup_frequency,
+                max_memory_usage_gb=self.max_memory_usage_gb,
+            )
+            
+            # Get initial batch size for optimization
+            initial_batch_size = getattr(self, 'batch_size', 32) or 32
+            
+            # Apply all optimizations
+            model, optimized_batch_size, optimizer = apply_all_optimizations(
+                model, initial_batch_size, opt_config
+            )
+            
+            # Store optimizer instance for cleanup later
+            self._optimizer = optimizer
+            
+            # Update batch size if it was optimized
+            if hasattr(self, 'batch_size') and self.batch_size is not None:
+                if optimized_batch_size != initial_batch_size:
+                    from mattergen.common.utils.performance_optimizer import logger
+                    logger.info(f"Batch size optimized from {initial_batch_size} to {optimized_batch_size}")
+                    # Note: We don't automatically update self.batch_size as it might be user-specified
+        else:
+            # Fallback to legacy optimization for backward compatibility
             model = apply_generation_optimizations(
                 model, 
                 enable_fp16=self.enable_mixed_precision, 
@@ -376,6 +466,34 @@ class CrystalGenerator:
         
         self._model = model
         self._cfg = self.checkpoint_info.config
+
+    def cleanup(self) -> None:
+        """Clean up resources and optimization state."""
+        if self._optimizer:
+            self._optimizer.cleanup()
+            self._optimizer = None
+            
+        # Clear model to free memory
+        if self._model is not None:
+            del self._model
+            self._model = None
+            
+        # Force cleanup
+        if hasattr(self, '_clear_memory_cache'):
+            self._clear_memory_cache()
+        else:
+            # Fallback cleanup
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            import gc
+            gc.collect()
+
+    def get_optimization_info(self) -> dict:
+        """Get information about applied optimizations."""
+        if self._optimizer:
+            return self._optimizer.get_optimization_stats()
+        return {"optimizations_applied": False}
 
     def generate(
         self,
@@ -414,7 +532,9 @@ class CrystalGenerator:
 
         #---NEW
         if diffusion_loss_fn is not None:
-            sampler.diffusion_module.set_diffusion_loss(diffusion_loss_fn, diffusion_loss_weight)
+            # Get diffusion module safely (handles multi-GPU wrappers)
+            diffusion_module = _get_diffusion_module(sampler)
+            diffusion_module.set_diffusion_loss(diffusion_loss_fn, diffusion_loss_weight)
         #---END NEW
 
         generated_structures = draw_samples_from_sampler(

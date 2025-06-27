@@ -95,7 +95,19 @@ class PredictorCorrector(Generic[Diffusable]):
 
     @classmethod
     def from_pl_module(cls, pl_module: DiffusionLightningModule, **kwargs) -> PredictorCorrector:
-        return cls(diffusion_module=pl_module.diffusion_module, device=pl_module.device, **kwargs)
+        # Handle wrapped models (DataParallel, DistributedDataParallel, etc.)
+        unwrapped_module = pl_module
+        
+        # Check for common wrapper attributes
+        if hasattr(pl_module, 'module'):
+            unwrapped_module = pl_module.module
+        elif hasattr(pl_module, '_orig_mod'):  # torch.compile wrapper
+            unwrapped_module = pl_module._orig_mod
+        
+        # Get device from original or wrapped module
+        device = getattr(unwrapped_module, 'device', getattr(pl_module, 'device', torch.device('cuda' if torch.cuda.is_available() else 'cpu')))
+        
+        return cls(diffusion_module=unwrapped_module.diffusion_module, device=device, **kwargs)
 
     @torch.no_grad()
     def sample(

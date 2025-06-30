@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import os
+import time
 from pathlib import Path
 from typing import Literal
 from mattergen.diffusion.diffusion_loss import make_combined_loss
@@ -57,7 +58,19 @@ def main(
     enable_quality_metrics: bool = False,
     adaptive_config_path: str | None = None,
     quality_threshold: float = 0.7,
-    max_adaptation_iterations: int = 5
+    max_adaptation_iterations: int = 5,
+    # NEW: Phase 4.2 advanced quality enhancement options
+    enable_advanced_quality: bool = False,
+    enable_quality_prediction: bool = False,
+    enable_quality_reporting: bool = False,
+    enable_trend_analysis: bool = False,
+    quality_model_path: str | None = None,
+    quality_report_format: str = "json",
+    # NEW: Phase 4.3 enterprise monitoring options
+    enable_enterprise_monitoring: bool = False,
+    enable_enterprise_dashboard: bool = False,
+    enable_enterprise_analytics: bool = False,
+    enterprise_config_path: str | None = None
 ):
     """
     Evaluate diffusion model against molecular metrics.
@@ -201,9 +214,75 @@ def main(
                 )
                 print("INFO: Phase 4 quality metrics enabled")
                 
+            # Phase 4.2: Initialize advanced quality features if enabled
+            advanced_quality_metrics = None
+            quality_reporter = None
+            
+            if enable_advanced_quality or enable_quality_prediction or enable_quality_reporting:
+                try:
+                    from mattergen.common.utils.advanced_quality_metrics import AdvancedQualityMetrics
+                    from mattergen.common.utils.quality_reporting import QualityReporter
+                    
+                    if enable_advanced_quality or enable_quality_prediction:
+                        advanced_quality_metrics = AdvancedQualityMetrics(
+                            enable_ml_prediction=enable_quality_prediction,
+                            enable_trend_analysis=enable_trend_analysis,
+                            model_path=quality_model_path,
+                            output_dir=output_path
+                        )
+                        print("INFO: Phase 4.2 advanced quality metrics enabled")
+                    
+                    if enable_quality_reporting:
+                        quality_reporter = QualityReporter(
+                            output_dir=output_path,
+                            enable_visualizations=True
+                        )
+                        print("INFO: Phase 4.2 quality reporting enabled")
+                        
+                except ImportError as e:
+                    print(f"WARNING: Phase 4.2 advanced quality features not available: {e}")
+                    enable_advanced_quality = False
+                    enable_quality_prediction = False
+                    enable_quality_reporting = False
+                
         except ImportError as e:
             print(f"WARNING: Phase 4 features not available: {e}")
             enable_phase4_features = False
+
+    # Phase 4.3: Initialize enterprise monitoring if enabled
+    enterprise_manager = None
+    if enable_enterprise_monitoring or enable_enterprise_dashboard or enable_enterprise_analytics:
+        try:
+            from mattergen.enterprise.integration import initialize_enterprise, start_enterprise
+            
+            # Load enterprise configuration
+            enterprise_config = {}
+            if enterprise_config_path:
+                import json
+                with open(enterprise_config_path, 'r') as f:
+                    enterprise_config = json.load(f)
+            
+            # Initialize enterprise manager
+            enterprise_manager = initialize_enterprise(
+                config=enterprise_config,
+                enable_monitoring=enable_enterprise_monitoring,
+                enable_dashboard=enable_enterprise_dashboard,
+                enable_analytics=enable_enterprise_analytics
+            )
+            
+            # Start enterprise services
+            start_enterprise()
+            print("INFO: Phase 4.3 enterprise monitoring enabled")
+            
+        except ImportError as e:
+            print(f"WARNING: Phase 4.3 enterprise features not available: {e}")
+            print("INFO: Install enterprise dependencies with: pip install -r requirements-enterprise.txt")
+            enable_enterprise_monitoring = False
+            enable_enterprise_dashboard = False
+            enable_enterprise_analytics = False
+        except Exception as e:
+            print(f"WARNING: Failed to initialize enterprise features: {e}")
+            enterprise_manager = None
 
     try:
         # Phase 4: Adaptive generation with quality assessment
@@ -220,6 +299,16 @@ def main(
                 print(f"Current guidance factor: {current_guidance_factor}")
                 
                 # Generate batch with current parameters
+                batch_start_time = time.time()
+                
+                # Enterprise monitoring: Record batch start
+                if enterprise_manager:
+                    enterprise_manager.on_generation_start(
+                        batch_id=adaptation_iteration, 
+                        gpu_id=0,  # Default GPU ID for single GPU generation
+                        batch_size=batch_size
+                    )
+                
                 temp_generator = CrystalGenerator(
                     checkpoint_info=checkpoint_info,
                     properties_to_condition_on=properties_to_condition_on,
@@ -248,6 +337,11 @@ def main(
                 batch_structures = temp_generator.generate(output_dir=Path(output_path))
                 temp_generator.cleanup()
                 
+                batch_end_time = time.time()
+                batch_duration = batch_end_time - batch_start_time
+                structures_generated = len(batch_structures)
+                throughput = structures_generated / batch_duration if batch_duration > 0 else 0
+                
                 # Assess quality if enabled
                 if quality_metrics:
                     quality_score, quality_report = quality_metrics.assess_structures(batch_structures)
@@ -260,6 +354,60 @@ def main(
                     quality_score = 1.0
                     quality_report = {}
                     filtered_structures = batch_structures
+                
+                # Enterprise monitoring: Record batch completion
+                if enterprise_manager:
+                    enterprise_manager.on_generation_complete(
+                        batch_id=adaptation_iteration,
+                        gpu_id=0,  # Default GPU ID
+                        structures_generated=structures_generated,
+                        batch_duration=batch_duration,
+                        quality_score=quality_score,
+                        throughput=throughput,
+                        memory_peak=0.0,  # TODO: Add memory tracking
+                        error_count=0  # TODO: Add error tracking
+                    )
+                    
+                    # Record quality assessment
+                    if quality_metrics and hasattr(quality_report, 'get'):
+                        enterprise_manager.on_quality_assessment(
+                            batch_id=adaptation_iteration,
+                            overall_quality=quality_score,
+                            quality_distribution=quality_report.get('distribution', {}),
+                            improvement_rate=quality_report.get('improvement_rate', 0.0),
+                            trend=quality_report.get('trend', 'stable'),
+                            convergence_status=quality_report.get('convergence', 'unknown')
+                        )
+                
+                # Phase 4.2: Advanced quality analysis if enabled
+                advanced_quality_results = None
+                if advanced_quality_metrics and len(filtered_structures) > 0:
+                    try:
+                        # Perform advanced quality analysis
+                        advanced_quality_results = advanced_quality_metrics.analyze_structures(
+                            structures=filtered_structures,
+                            batch_id=adaptation_iteration,
+                            metadata={'guidance_factor': current_guidance_factor}
+                        )
+                        
+                        # ML-based quality prediction if enabled
+                        if enable_quality_prediction:
+                            prediction_results = advanced_quality_metrics.predict_quality(filtered_structures)
+                            print(f"ML quality predictions: mean={prediction_results['mean_predicted_quality']:.3f}")
+                        
+                        # Update trend analysis
+                        if enable_trend_analysis:
+                            trend_data = advanced_quality_metrics.update_trends(
+                                quality_score=quality_score,
+                                structures=filtered_structures,
+                                iteration=adaptation_iteration
+                            )
+                            
+                        print(f"Advanced quality analysis complete for {len(filtered_structures)} structures")
+                        
+                    except Exception as e:
+                        print(f"WARNING: Advanced quality analysis failed: {e}")
+                        advanced_quality_results = None
                 
                 # Adapt sampling parameters if enabled
                 if adaptive_sampler:
@@ -334,6 +482,41 @@ def main(
         
         if not enable_phase4_features or not (adaptive_sampler or quality_metrics):
             print(f"\nGeneration complete! Generated {len(generated_structures)} structures.")
+        
+        # Phase 4.2: Generate final quality report if enabled
+        if enable_quality_reporting and quality_reporter and enable_phase4_features:
+            try:
+                print("\nGenerating comprehensive quality report...")
+                
+                # Collect all quality data from advanced metrics
+                quality_data = {}
+                if advanced_quality_metrics:
+                    quality_data = advanced_quality_metrics.get_comprehensive_results()
+                
+                # Generate comprehensive report
+                report = quality_reporter.generate_report_from_quality_data(
+                    quality_data=quality_data,
+                    generation_metadata={
+                        'total_structures': total_generated if enable_phase4_features else len(generated_structures),
+                        'enable_adaptive_sampling': enable_adaptive_sampling,
+                        'enable_quality_metrics': enable_quality_metrics,
+                        'enable_advanced_quality': enable_advanced_quality,
+                        'quality_threshold': quality_threshold,
+                        'adaptation_iterations': adaptation_iteration if enable_phase4_features else 0
+                    }
+                )
+                
+                # Save report
+                report_path = quality_reporter.save_report(report)
+                print(f"Quality report saved to: {report_path}")
+                
+                # Generate visualizations if requested
+                if hasattr(quality_reporter, 'generate_visualizations'):
+                    viz_paths = quality_reporter.generate_visualizations(quality_data)
+                    print(f"Visualizations saved to: {viz_paths}")
+                    
+            except Exception as e:
+                print(f"WARNING: Quality report generation failed: {e}")
         
     finally:
         # Clean up resources

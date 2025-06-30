@@ -328,12 +328,47 @@ Production Examples:
     parser.add_argument('--max_adaptation_iterations', type=int, default=5,
                         help='Maximum adaptation iterations (default: 5)')
     
+    # Phase 4.2: Advanced Quality Enhancement
+    parser.add_argument('--enable_advanced_quality', type=str, default='false',
+                        choices=['true', 'false'],
+                        help='Enable advanced quality analysis and ML-based prediction (default: false)')
+    parser.add_argument('--enable_quality_prediction', type=str, default='false',
+                        choices=['true', 'false'],
+                        help='Enable ML-based quality prediction (default: false)')
+    parser.add_argument('--enable_quality_reporting', type=str, default='false',
+                        choices=['true', 'false'],
+                        help='Enable comprehensive quality reporting (default: false)')
+    parser.add_argument('--enable_trend_analysis', type=str, default='false',
+                        choices=['true', 'false'],
+                        help='Enable quality trend analysis (default: false)')
+    parser.add_argument('--quality_model_path', default=None,
+                        help='Path to pre-trained quality prediction model')
+    parser.add_argument('--quality_report_format', default='json',
+                        choices=['json', 'html', 'pdf', 'csv'],
+                        help='Quality report output format (default: json)')
+    
+    # Phase 4.3: Enterprise Monitoring and Analytics
+    parser.add_argument('--enable_enterprise_monitoring', type=str, default='false',
+                        choices=['true', 'false'],
+                        help='Enable enterprise monitoring and metrics collection (default: false)')
+    parser.add_argument('--enable_enterprise_dashboard', type=str, default='false',
+                        choices=['true', 'false'],
+                        help='Enable enterprise dashboard (default: false)')
+    parser.add_argument('--enable_enterprise_analytics', type=str, default='false',
+                        choices=['true', 'false'],
+                        help='Enable enterprise analytics and reporting (default: false)')
+    parser.add_argument('--enterprise_config_path', default=None,
+                        help='Path to enterprise configuration file')
+    
     args = parser.parse_args()
     
     # Convert string booleans to actual booleans
     bool_args = ['enable_optimizations', 'enable_mixed_precision', 'enable_model_compilation', 
                  'enable_graph_caching', 'record_trajectories', 'print_loss', 'print_optimization_info',
-                 'enable_phase4_features', 'enable_adaptive_sampling', 'enable_quality_metrics']
+                 'enable_phase4_features', 'enable_adaptive_sampling', 'enable_quality_metrics',
+                 'enable_advanced_quality', 'enable_quality_prediction', 'enable_quality_reporting',
+                 'enable_trend_analysis', 'enable_enterprise_monitoring', 'enable_enterprise_dashboard',
+                 'enable_enterprise_analytics']
     for arg_name in bool_args:
         setattr(args, arg_name, getattr(args, arg_name).lower() == 'true')
     
@@ -381,6 +416,18 @@ Production Examples:
             'enable_quality_metrics': args.enable_quality_metrics,
             'quality_threshold': args.quality_threshold,
             'max_adaptation_iterations': args.max_adaptation_iterations,
+            # Phase 4.2 Advanced Quality options
+            'enable_advanced_quality': args.enable_advanced_quality,
+            'enable_quality_prediction': args.enable_quality_prediction,
+            'enable_quality_reporting': args.enable_quality_reporting,
+            'enable_trend_analysis': args.enable_trend_analysis,
+            'quality_model_path': args.quality_model_path,
+            'quality_report_format': args.quality_report_format,
+            # Phase 4.3 Enterprise options
+            'enable_enterprise_monitoring': args.enable_enterprise_monitoring,
+            'enable_enterprise_dashboard': args.enable_enterprise_dashboard,
+            'enable_enterprise_analytics': args.enable_enterprise_analytics,
+            'enterprise_config_path': args.enterprise_config_path,
         }
         
         # Add model selection

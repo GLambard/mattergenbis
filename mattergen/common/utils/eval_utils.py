@@ -111,15 +111,61 @@ def save_structures(output_path: Path, structures: Sequence[Structure]) -> None:
         structures: sequence of structures.
     """
     ase_atoms = [AseAtomsAdaptor.get_atoms(x) for x in structures]
+    valid_ase_atoms = []
+    failed_structures = []
+    
+    # First, validate and filter structures for extxyz format
+    for ix, ase_atom in enumerate(ase_atoms):
+        try:
+            # Test if the structure can be written (check for singular matrices, etc.)
+            # Try to get the cell and check determinant
+            cell_matrix = ase_atom.get_cell()
+            if np.abs(np.linalg.det(cell_matrix)) < 1e-10:
+                logger.warning(f"Structure {ix} has singular/degenerate cell matrix (det={np.linalg.det(cell_matrix):.2e}), skipping")
+                failed_structures.append(ix)
+                continue
+            valid_ase_atoms.append(ase_atom)
+        except Exception as e:
+            logger.warning(f"Structure {ix} validation failed: {e}, skipping")
+            failed_structures.append(ix)
+            continue
+    
+    if not valid_ase_atoms:
+        logger.error("No valid structures to save!")
+        return
+    
+    logger.info(f"Saving {len(valid_ase_atoms)} valid structures out of {len(structures)} total structures")
+    if failed_structures:
+        logger.warning(f"Skipped {len(failed_structures)} invalid structures: {failed_structures}")
+    
     try:
-        ase.io.write(output_path / GENERATED_CRYSTALS_EXTXYZ_FILE_NAME, ase_atoms)
+        # Save valid structures to extxyz
+        ase.io.write(output_path / GENERATED_CRYSTALS_EXTXYZ_FILE_NAME, valid_ase_atoms)
+        logger.info(f"Successfully wrote {len(valid_ase_atoms)} structures to {GENERATED_CRYSTALS_EXTXYZ_FILE_NAME}")
 
+        # Save valid structures to CIF zip file
         with ZipFile(output_path / GENERATED_CRYSTALS_ZIP_FILE_NAME, "w") as zip_obj:
-            for ix, ase_atom in enumerate(ase_atoms):
-                ase.io.write(f"/tmp/gen_{ix}.cif", ase_atom, format="cif")
-                zip_obj.write(f"/tmp/gen_{ix}.cif", arcname=f"gen_{ix}.cif")
+            cif_success_count = 0
+            for global_ix, (valid_ix, ase_atom) in enumerate([(i, atom) for i, atom in enumerate(ase_atoms) if i not in failed_structures]):
+                try:
+                    temp_cif_path = f"/tmp/gen_{global_ix}.cif"
+                    ase.io.write(temp_cif_path, ase_atom, format="cif")
+                    zip_obj.write(temp_cif_path, arcname=f"gen_{global_ix}.cif")
+                    cif_success_count += 1
+                    # Clean up temp file
+                    try:
+                        os.remove(temp_cif_path)
+                    except:
+                        pass
+                except (np.linalg.LinAlgError, ValueError, IOError) as e:
+                    logger.warning(f"Failed to write CIF for structure {valid_ix}: {e}")
+                    continue
+                    
+        logger.info(f"Successfully wrote {cif_success_count} CIF files to {GENERATED_CRYSTALS_ZIP_FILE_NAME}")
+        
     except IOError as e:
-        print(f"Got error {e} writing the generated structures to disk.")
+        logger.error(f"Error writing structures to disk: {e}")
+        raise
 
 
 def load_structures(input_path: Path) -> Sequence[Structure]:

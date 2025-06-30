@@ -45,6 +45,12 @@ def main(
     max_gpus: int | None = None,
     max_memory_usage_gb: float | None = None,
     print_optimization_info: bool = False,
+    # NEW: Phase 3 advanced optimization options
+    enable_phase3_optimizations: bool = False,
+    optimize_memory: bool = False,
+    enable_advanced_caching: bool = False,
+    use_intelligent_batching: bool = False,
+    hardware_optimization_level: str = "auto",  # "auto", "aggressive", "conservative"
 ):
     """
     Evaluate diffusion model against molecular metrics.
@@ -145,6 +151,17 @@ def main(
         max_memory_usage_gb=max_memory_usage_gb,
     )
     
+    # Phase 3: Apply advanced optimizations if enabled
+    phase3_optimizer = None
+    if enable_phase3_optimizations:
+        try:
+            from mattergen.common.utils.performance_optimizer import Phase3PerformanceOptimizer
+            phase3_optimizer = Phase3PerformanceOptimizer()
+            print("INFO: Phase 3 advanced optimizations enabled")
+        except ImportError as e:
+            print(f"WARNING: Phase 3 optimizations not available: {e}")
+            enable_phase3_optimizations = False
+
     try:
         generated_structures = generator.generate(output_dir=Path(output_path))
         

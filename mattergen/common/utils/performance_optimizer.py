@@ -34,6 +34,22 @@ except ImportError as e:
     logger = logging.getLogger(__name__)
     logger.debug(f"Graph cache not available: {e}")
 
+try:
+    from .advanced_graph_cache import get_global_cache, AdvancedGraphCache
+    ADVANCED_GRAPH_CACHE_AVAILABLE = True
+except ImportError as e:
+    ADVANCED_GRAPH_CACHE_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.debug(f"Advanced graph cache not available: {e}")
+
+try:
+    from .hardware_optimizer import HardwareOptimizer, IntelligentBatchSizer, MemoryManager
+    HARDWARE_OPTIMIZER_AVAILABLE = True
+except ImportError as e:
+    HARDWARE_OPTIMIZER_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.debug(f"Hardware optimizer not available: {e}")
+
 PHASE3_AVAILABLE = MULTI_GPU_AVAILABLE and GRAPH_CACHE_AVAILABLE
 
 if not PHASE3_AVAILABLE:
@@ -457,6 +473,53 @@ class PerformanceOptimizer:
             ]
         
         return stats
+
+
+# Phase 3 Advanced Optimizations Integration
+from .advanced_graph_cache import get_global_cache, AdvancedGraphCache
+from .hardware_optimizer import HardwareOptimizer, IntelligentBatchSizer, MemoryManager
+
+class Phase3PerformanceOptimizer:
+    """Complete Phase 3 optimization suite"""
+    
+    def __init__(self):
+        self.hardware_optimizer = HardwareOptimizer()
+        self.batch_sizer = IntelligentBatchSizer()
+        self.memory_manager = MemoryManager()
+        self.graph_cache = get_global_cache()
+        self.optimizations_enabled = []
+    
+    def apply_all_optimizations(self, model, sample_input=None):
+        """Apply complete Phase 3 optimization suite"""
+        logging.info("Applying Phase 3 advanced optimizations...")
+        
+        # Hardware-specific optimizations
+        model = self.hardware_optimizer.apply_model_optimizations(model)
+        self.optimizations_enabled.extend(self.hardware_optimizer.optimizations_applied)
+        
+        # Intelligent batch sizing
+        if sample_input is not None:
+            optimal_batch_size = self.batch_sizer.calculate_optimal_batch_size(model, sample_input)
+            logging.info(f"Optimal batch size calculated: {optimal_batch_size}")
+        
+        # Memory management
+        model = self.memory_manager.gradient_checkpointing_wrapper(model)
+        
+        # Graph caching
+        cache_stats = self.graph_cache.get_stats()
+        logging.info(f"Advanced graph cache ready: {cache_stats}")
+        
+        return model
+    
+    def get_optimization_report(self):
+        """Get comprehensive optimization report"""
+        return {
+            'phase': 'Phase 3 - Advanced Optimizations',
+            'hardware_info': self.hardware_optimizer.get_optimization_summary(),
+            'cache_stats': self.graph_cache.get_stats(),
+            'memory_stats': self.hardware_optimizer.get_memory_stats(),
+            'optimizations_enabled': self.optimizations_enabled
+        }
 
 
 def apply_all_optimizations(model: nn.Module, 

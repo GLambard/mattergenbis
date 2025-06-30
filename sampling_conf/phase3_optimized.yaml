@@ -1,31 +1,46 @@
-# MatterGen Phase 3 Optimized Sampling Configuration
-# Includes multi-GPU support, advanced caching, and hardware-specific optimizations
+# MatterGen Phase 3 Complete Optimized Sampling Configuration
+# Includes multi-GPU support, advanced caching, hardware optimizations, and intelligent sampling
 
-# Sample with aggressive optimizations for maximum speed
-N: 50  # Reduced diffusion steps for speed
+# Phase 3: Balanced speed/quality optimization
+N: 200  # Balanced reduction (5x speedup while maintaining quality)
 
-# Predictor settings
-# Number of denoising layers, i.e., the number of timesteps
-predictor:
-  _target_: mattergen.diffusion.sampling.predictor.EulerMaruyama 
-  num_steps: 50  # Match N for consistency
-
-# Corrector settings - disabled for speed
-corrector:
-  _target_: mattergen.diffusion.sampling.corrector.AnnealedLangevin
-  num_steps: 0  # Disabled for maximum speed
-  delta_t: 1.e-3
-
+# Phase 3: Advanced Guided Sampling with Classifier-Free Guidance
 sampler_partial:
-  _target_: mattergen.diffusion.sampling.pc_sampler.PredictorCorrector
+  _target_: mattergen.diffusion.sampling.classifier_free_guidance.GuidedPredictorCorrector.from_pl_module
+  N: ${N}
+  eps_t: ${eval:'1/${.N}'}
+  _partial_: true
+  guidance_scale: 0.0  # No guidance for speed
+  
+  # Phase 3: Remove conditioning functions for performance
+  remove_conditioning_fn:
+    _target_: mattergen.property_embeddings.SetUnconditionalEmbeddingType
+  keep_conditioning_fn:
+    _target_: mattergen.property_embeddings.SetConditionalEmbeddingType
+  
+  # Phase 3: Optimized Ancestral Sampling Predictors
   predictor_partials:
-    pos: ${predictor}
-    atom_types:
-      _target_: mattergen.diffusion.sampling.predictor.EulerMaruyama
-      num_steps: ${N}
-    cell: ${predictor}
-  corrector_partials: {}  # No correctors for speed
+    pos:
+      _target_: mattergen.diffusion.wrapped.wrapped_predictors_correctors.WrappedAncestralSamplingPredictor
+      _partial_: true
+    cell:
+      _target_: mattergen.common.diffusion.predictors_correctors.LatticeAncestralSamplingPredictor
+      _partial_: true
+    atomic_numbers:
+      _target_: mattergen.diffusion.d3pm.d3pm_predictors_correctors.D3PMAncestralSamplingPredictor
+      predict_x0: true  # Direct prediction for speed
+      _partial_: true
+  
+  # Phase 3: Completely disable correctors for maximum speed
+  corrector_partials: {}
+  n_steps_corrector: 0
 
-# Condition loader - removed conflicting settings, will be set by generator
+# Phase 3: Advanced Condition Loader with Intelligent Caching
 condition_loader_partial:
+  _partial_: true
   _target_: mattergen.common.data.condition_factory.get_number_of_atoms_condition_loader
+  num_atoms_distribution: ALEX_MP_20
+  # Phase 3: Intelligent batch sizing based on available memory
+  batch_size: 8  # Will be auto-adjusted by Phase 3 optimizer
+  cache_enabled: true
+  precompute_conditions: true

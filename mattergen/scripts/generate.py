@@ -51,6 +51,13 @@ def main(
     enable_advanced_caching: bool = False,
     use_intelligent_batching: bool = False,
     hardware_optimization_level: str = "auto",  # "auto", "aggressive", "conservative"
+    # NEW: Phase 4 adaptive sampling options
+    enable_phase4_features: bool = False,
+    enable_adaptive_sampling: bool = False,
+    enable_quality_metrics: bool = False,
+    adaptive_config_path: str | None = None,
+    quality_threshold: float = 0.7,
+    max_adaptation_iterations: int = 5
 ):
     """
     Evaluate diffusion model against molecular metrics.
@@ -162,8 +169,161 @@ def main(
             print(f"WARNING: Phase 3 optimizations not available: {e}")
             enable_phase3_optimizations = False
 
+    # Phase 4: Initialize adaptive sampling and quality metrics if enabled
+    adaptive_sampler = None
+    quality_metrics = None
+    phase4_integration = None
+    
+    if enable_phase4_features:
+        try:
+            from mattergen.common.utils.phase4_integration import Phase4IntegrationManager
+            from mattergen.common.utils.adaptive_sampler import AdaptiveSampler
+            from mattergen.common.utils.quality_metrics import QualityMetrics
+            
+            # Initialize Phase 4 integration manager
+            phase4_integration = Phase4IntegrationManager(
+                enable_adaptive_sampling=enable_adaptive_sampling,
+                enable_quality_metrics=enable_quality_metrics,
+                config_path=adaptive_config_path
+            )
+            
+            if enable_adaptive_sampling:
+                adaptive_sampler = AdaptiveSampler(
+                    config_path=adaptive_config_path,
+                    max_iterations=max_adaptation_iterations
+                )
+                print("INFO: Phase 4 adaptive sampling enabled")
+            
+            if enable_quality_metrics:
+                quality_metrics = QualityMetrics(
+                    threshold=quality_threshold,
+                    config_path=adaptive_config_path
+                )
+                print("INFO: Phase 4 quality metrics enabled")
+                
+        except ImportError as e:
+            print(f"WARNING: Phase 4 features not available: {e}")
+            enable_phase4_features = False
+
     try:
-        generated_structures = generator.generate(output_dir=Path(output_path))
+        # Phase 4: Adaptive generation with quality assessment
+        if enable_phase4_features and (adaptive_sampler or quality_metrics):
+            print("INFO: Starting Phase 4 adaptive generation process...")
+            
+            # Initialize generation parameters
+            current_guidance_factor = diffusion_guidance_factor if diffusion_guidance_factor is not None else 0.0
+            total_generated = 0
+            adaptation_iteration = 0
+            
+            while total_generated < (batch_size * num_batches) and adaptation_iteration < max_adaptation_iterations:
+                print(f"\nAdaptation iteration {adaptation_iteration + 1}/{max_adaptation_iterations}")
+                print(f"Current guidance factor: {current_guidance_factor}")
+                
+                # Generate batch with current parameters
+                temp_generator = CrystalGenerator(
+                    checkpoint_info=checkpoint_info,
+                    properties_to_condition_on=properties_to_condition_on,
+                    batch_size=batch_size,
+                    num_batches=1,  # Generate one batch at a time for adaptation
+                    sampling_config_name=sampling_config_name,
+                    sampling_config_path=_sampling_config_path,
+                    sampling_config_overrides=sampling_config_overrides,
+                    record_trajectories=record_trajectories,
+                    diffusion_guidance_factor=current_guidance_factor,
+                    target_compositions_dict=target_compositions,
+                    diffusion_loss_fn=loss_fn,
+                    diffusion_loss_weight=diffusion_loss_weight,
+                    print_loss=print_loss,
+                    enable_performance_optimizations=enable_optimizations,
+                    enable_mixed_precision=enable_mixed_precision,
+                    enable_model_compilation=enable_model_compilation,
+                    enable_multi_gpu=enable_multi_gpu,
+                    enable_graph_caching=enable_graph_caching,
+                    enable_gradient_checkpointing=enable_gradient_checkpointing,
+                    multi_gpu_strategy=multi_gpu_strategy,
+                    max_gpus=max_gpus,
+                    max_memory_usage_gb=max_memory_usage_gb,
+                )
+                
+                batch_structures = temp_generator.generate(output_dir=Path(output_path))
+                temp_generator.cleanup()
+                
+                # Assess quality if enabled
+                if quality_metrics:
+                    quality_score, quality_report = quality_metrics.assess_structures(batch_structures)
+                    print(f"Batch quality score: {quality_score:.3f}")
+                    
+                    # Filter structures based on quality
+                    filtered_structures = quality_metrics.filter_structures(batch_structures)
+                    print(f"Filtered structures: {len(filtered_structures)}/{len(batch_structures)} passed quality threshold")
+                else:
+                    quality_score = 1.0
+                    quality_report = {}
+                    filtered_structures = batch_structures
+                
+                # Adapt sampling parameters if enabled
+                if adaptive_sampler:
+                    adaptation_result = adaptive_sampler.adapt_parameters(
+                        structures=filtered_structures,
+                        quality_score=quality_score,
+                        current_guidance_factor=current_guidance_factor,
+                        iteration=adaptation_iteration
+                    )
+                    
+                    current_guidance_factor = adaptation_result['new_guidance_factor']
+                    should_continue = adaptation_result['should_continue']
+                    
+                    print(f"Adaptation result: {adaptation_result}")
+                    
+                    if not should_continue:
+                        print("INFO: Adaptive sampling converged, stopping early")
+                        break
+                
+                total_generated += len(filtered_structures)
+                adaptation_iteration += 1
+                
+                # Check if we have enough structures
+                if total_generated >= (batch_size * num_batches):
+                    break
+            
+            # Final generation to reach target count if needed
+            remaining = (batch_size * num_batches) - total_generated
+            if remaining > 0:
+                print(f"\nGenerating final {remaining} structures...")
+                final_generator = CrystalGenerator(
+                    checkpoint_info=checkpoint_info,
+                    properties_to_condition_on=properties_to_condition_on,
+                    batch_size=remaining,
+                    num_batches=1,
+                    sampling_config_name=sampling_config_name,
+                    sampling_config_path=_sampling_config_path,
+                    sampling_config_overrides=sampling_config_overrides,
+                    record_trajectories=record_trajectories,
+                    diffusion_guidance_factor=current_guidance_factor,
+                    target_compositions_dict=target_compositions,
+                    diffusion_loss_fn=loss_fn,
+                    diffusion_loss_weight=diffusion_loss_weight,
+                    print_loss=print_loss,
+                    enable_performance_optimizations=enable_optimizations,
+                    enable_mixed_precision=enable_mixed_precision,
+                    enable_model_compilation=enable_model_compilation,
+                    enable_multi_gpu=enable_multi_gpu,
+                    enable_graph_caching=enable_graph_caching,
+                    enable_gradient_checkpointing=enable_gradient_checkpointing,
+                    multi_gpu_strategy=multi_gpu_strategy,
+                    max_gpus=max_gpus,
+                    max_memory_usage_gb=max_memory_usage_gb,
+                )
+                final_structures = final_generator.generate(output_dir=Path(output_path))
+                final_generator.cleanup()
+                total_generated += len(final_structures)
+            
+            print(f"\nPhase 4 adaptive generation complete! Generated {total_generated} structures in {adaptation_iteration} iterations.")
+            generated_structures = []  # Structures already saved in adaptive process
+            
+        else:
+            # Standard generation (Phase 1-3)
+            generated_structures = generator.generate(output_dir=Path(output_path))
         
         # Print final optimization stats
         if print_optimization_info:
@@ -172,7 +332,8 @@ def main(
             for key, value in opt_info.items():
                 print(f"  {key}: {value}")
         
-        print(f"\nGeneration complete! Generated {len(generated_structures)} structures.")
+        if not enable_phase4_features or not (adaptive_sampler or quality_metrics):
+            print(f"\nGeneration complete! Generated {len(generated_structures)} structures.")
         
     finally:
         # Clean up resources

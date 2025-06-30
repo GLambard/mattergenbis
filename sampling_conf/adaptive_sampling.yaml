@@ -1,0 +1,253 @@
+# MatterGen Phase 4 Adaptive Sampling Configuration
+# =================================================
+# 
+# This configuration enables intelligent adaptive sampling with:
+# - Dynamic step adjustment based on convergence
+# - Quality-aware early stopping
+# - Progressive refinement
+# - Real-time quality monitoring
+
+# Base sampling configuration (Phase 3 foundation)
+base_config: "phase3_optimized"
+
+# Adaptive sampling settings
+adaptive_sampling:
+  enabled: true
+  
+  # Dynamic step adjustment
+  min_steps: 50
+  max_steps: 500
+  initial_steps: 200
+  step_adjustment_factor: 0.15
+  
+  # Quality thresholds
+  quality_threshold: 0.85
+  stability_threshold: 0.9
+  convergence_threshold: 0.95
+  
+  # Early stopping configuration
+  early_stopping:
+    enabled: true
+    patience: 20
+    min_improvement: 0.001
+    quality_target: 0.9
+  
+  # Progressive refinement
+  progressive_refinement:
+    enabled: true
+    stages: [50, 100, 200, 300]
+    quality_targets: [0.6, 0.7, 0.8, 0.9]
+    stage_transition_threshold: 0.8
+  
+  # Convergence detection
+  convergence_detection:
+    window_size: 10
+    loss_stability_threshold: 0.95
+    quality_stability_threshold: 0.9
+    gradient_trend_threshold: 0.0
+
+# Quality assessment configuration
+quality_assessment:
+  enabled: true
+  
+  # Quality thresholds
+  thresholds:
+    min_overall_quality: 0.7
+    min_geometric_quality: 0.6
+    min_physical_quality: 0.6
+    min_chemical_quality: 0.6
+    
+    # Individual metric thresholds
+    min_bond_length_score: 0.5
+    min_stability_score: 0.5
+    min_symmetry_score: 0.4
+    
+    # Validation requirements
+    require_valid_cell: true
+    require_no_overlaps: true
+    require_realistic_bonds: true
+  
+  # Quality targets
+  targets:
+    excellent_rate: 0.15  # 15% excellent structures
+    good_rate: 0.35       # 35% good structures
+    acceptable_rate: 0.45 # 45% acceptable structures
+    max_invalid_rate: 0.05 # Max 5% invalid structures
+
+# Quality metrics configuration (alias for quality_assessment)
+quality_metrics:
+  enabled: true
+  
+  # Quality thresholds (same as quality_assessment for compatibility)
+  thresholds:
+    min_overall_quality: 0.7
+    min_geometric_quality: 0.6
+    min_physical_quality: 0.6
+    min_chemical_quality: 0.6
+    
+    # Individual metric thresholds
+    min_bond_length_score: 0.5
+    min_stability_score: 0.5
+    min_symmetry_score: 0.4
+    
+    # Validation requirements
+    require_valid_cell: true
+    require_no_overlaps: true
+    require_realistic_bonds: true
+  
+  # Quality targets
+  targets:
+    excellent_rate: 0.15  # 15% excellent structures
+    good_rate: 0.35       # 35% good structures
+    acceptable_rate: 0.45 # 45% acceptable structures
+    max_invalid_rate: 0.05 # Max 5% invalid structures
+
+# Performance optimization (Phase 3 foundation)
+optimization:
+  enable_model_compilation: true
+  enable_graph_caching: true
+  enable_mixed_precision: false  # Disabled for stability
+  enable_adaptive_batch_sizing: true
+  
+  # Advanced caching
+  cache_size_gb: 4
+  enable_disk_cache: true
+  cache_eviction_policy: "lru"
+  
+  # Memory management
+  enable_memory_monitoring: true
+  memory_cleanup_threshold: 0.85
+  enable_gradient_checkpointing: true
+
+# Backward compatibility alias
+optimizations:
+  enable_model_compilation: true
+  enable_graph_caching: true
+  enable_mixed_precision: false  # Disabled for stability
+  enable_adaptive_batch_sizing: true
+  
+  # Advanced caching
+  cache_size_gb: 4
+  enable_disk_cache: true
+  cache_eviction_policy: "lru"
+  
+  # Memory management
+  enable_memory_monitoring: true
+  memory_cleanup_threshold: 0.85
+  enable_gradient_checkpointing: true
+
+# Diffusion model configuration (optimized for adaptive sampling)
+diffusion:
+  # Base settings from Phase 3
+  num_diffusion_steps: 200  # Will be dynamically adjusted
+  schedule: "cosine"
+  beta_start: 0.0001
+  beta_end: 0.02
+  
+  # Adaptive settings
+  adaptive_scheduling: true
+  schedule_adjustment_factor: 0.1
+  min_beta_start: 0.00005
+  max_beta_end: 0.05
+  
+  # Classifier-free guidance (Phase 3)
+  guidance_scale: 7.5
+  guidance_rescale: 0.0
+  
+  # Corrector settings (disabled for Phase 3 speed)
+  num_corrector_steps: 0
+  corrector_schedule: "none"
+
+# Sampling strategy
+sampling:
+  # Ancestral sampling (Phase 3 optimized)
+  sampler: "ancestral"
+  
+  # Adaptive strategy
+  adaptive_strategy: "quality_driven"
+  strategy_parameters:
+    quality_weight: 0.4
+    convergence_weight: 0.3
+    efficiency_weight: 0.3
+  
+  # Progressive sampling
+  enable_progressive_sampling: true
+  progressive_batch_sizes: [16, 32, 64]
+  progressive_quality_gates: [0.6, 0.75, 0.85]
+
+# Monitoring and logging
+monitoring:
+  enabled: true
+  
+  # Real-time metrics
+  track_convergence: true
+  track_quality: true
+  track_performance: true
+  track_memory_usage: true
+  
+  # Logging configuration
+  log_level: "INFO"
+  log_adaptive_decisions: true
+  log_quality_assessments: true
+  log_performance_metrics: true
+  
+  # Reporting
+  generate_optimization_report: true
+  report_frequency: 100  # Every 100 structures
+  save_quality_history: true
+
+# Hardware-specific optimizations (Phase 3)
+hardware:
+  auto_detect_capabilities: true
+  
+  # GPU optimizations
+  enable_tensor_cores: true
+  enable_tf32: true
+  enable_flash_attention: true
+  
+  # Memory optimizations
+  enable_memory_efficient_attention: true
+  attention_slice_size: 1
+  
+  # Batch size optimization
+  auto_batch_sizing: true
+  max_batch_size: 64
+  memory_safety_margin: 0.1
+
+# Output configuration
+output:
+  # Structure saving (with Phase 3 error handling)
+  save_all_structures: true
+  save_quality_metrics: true
+  save_convergence_history: true
+  
+  # Quality filtering
+  filter_by_quality: false  # Save all for analysis, filter separately
+  quality_filter_threshold: 0.7
+  
+  # File formats
+  formats: ["cif", "extxyz"]
+  compress_outputs: true
+  
+  # Metadata
+  include_generation_metadata: true
+  include_quality_scores: true
+  include_adaptive_history: true
+
+# Experimental features (Phase 4)
+experimental:
+  enabled: true
+  
+  # Advanced adaptive algorithms
+  enable_ml_prediction: false  # Disabled initially
+  enable_multi_objective_optimization: true
+  enable_adaptive_guidance: true
+  
+  # Quality-driven generation
+  enable_iterative_refinement: true
+  max_refinement_iterations: 3
+  refinement_quality_threshold: 0.8
+  
+  # Performance prediction
+  enable_performance_prediction: false  # Future feature
+  prediction_model_path: null

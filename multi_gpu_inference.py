@@ -311,11 +311,29 @@ Production Examples:
     parser.add_argument('--diffusion_loss_weight', type=float, default=1.0,
                         help='Diffusion loss weight (default: 1.0)')
     
+    # Phase 4: Adaptive sampling and quality metrics
+    parser.add_argument('--enable_phase4_features', type=str, default='false',
+                        choices=['true', 'false'],
+                        help='Enable Phase 4 adaptive features (default: false)')
+    parser.add_argument('--enable_adaptive_sampling', type=str, default='false',
+                        choices=['true', 'false'],
+                        help='Enable adaptive sampling (default: false)')
+    parser.add_argument('--enable_quality_metrics', type=str, default='false',
+                        choices=['true', 'false'],
+                        help='Enable quality metrics assessment (default: false)')
+    parser.add_argument('--adaptive_config_path', default=None,
+                        help='Path to adaptive sampling config file')
+    parser.add_argument('--quality_threshold', type=float, default=0.7,
+                        help='Quality threshold for structure filtering (default: 0.7)')
+    parser.add_argument('--max_adaptation_iterations', type=int, default=5,
+                        help='Maximum adaptation iterations (default: 5)')
+    
     args = parser.parse_args()
     
     # Convert string booleans to actual booleans
     bool_args = ['enable_optimizations', 'enable_mixed_precision', 'enable_model_compilation', 
-                 'enable_graph_caching', 'record_trajectories', 'print_loss', 'print_optimization_info']
+                 'enable_graph_caching', 'record_trajectories', 'print_loss', 'print_optimization_info',
+                 'enable_phase4_features', 'enable_adaptive_sampling', 'enable_quality_metrics']
     for arg_name in bool_args:
         setattr(args, arg_name, getattr(args, arg_name).lower() == 'true')
     
@@ -357,6 +375,12 @@ Production Examples:
             'enable_model_compilation': args.enable_model_compilation,
             'enable_graph_caching': args.enable_graph_caching,
             'print_optimization_info': args.print_optimization_info,
+            # Phase 4 options
+            'enable_phase4_features': args.enable_phase4_features,
+            'enable_adaptive_sampling': args.enable_adaptive_sampling,
+            'enable_quality_metrics': args.enable_quality_metrics,
+            'quality_threshold': args.quality_threshold,
+            'max_adaptation_iterations': args.max_adaptation_iterations,
         }
         
         # Add model selection
@@ -374,6 +398,8 @@ Production Examples:
             mattergen_args['diffusion_guidance_factor'] = args.diffusion_guidance_factor
         if args.sampling_config_path:
             mattergen_args['sampling_config_path'] = args.sampling_config_path
+        if args.adaptive_config_path:
+            mattergen_args['adaptive_config_path'] = args.adaptive_config_path
         
         job_config = {
             'job_id': i,

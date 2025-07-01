@@ -190,28 +190,28 @@ def main(
     if enable_phase4_features:
         try:
             from mattergen.common.utils.phase4_integration import Phase4IntegrationManager
-            from mattergen.common.utils.adaptive_sampler import AdaptiveSampler
-            from mattergen.common.utils.quality_metrics import QualityMetrics
+            from mattergen.common.utils.adaptive_sampler import AdaptiveSampler, AdaptiveSamplingConfig
+            from mattergen.common.utils.quality_metrics import StructureQualityAssessor, QualityThresholds
             
             # Initialize Phase 4 integration manager
             phase4_integration = Phase4IntegrationManager(
                 enable_adaptive_sampling=enable_adaptive_sampling,
-                enable_quality_metrics=enable_quality_metrics,
+                enable_quality_assessment=enable_quality_metrics,
                 config_path=adaptive_config_path
             )
             
             if enable_adaptive_sampling:
-                adaptive_sampler = AdaptiveSampler(
-                    config_path=adaptive_config_path,
-                    max_iterations=max_adaptation_iterations
-                )
+                # Create adaptive sampling config
+                adaptive_config = AdaptiveSamplingConfig()
+                adaptive_config.max_iterations = max_adaptation_iterations
+                adaptive_sampler = AdaptiveSampler(config=adaptive_config)
                 print("INFO: Phase 4 adaptive sampling enabled")
             
             if enable_quality_metrics:
-                quality_metrics = QualityMetrics(
-                    threshold=quality_threshold,
-                    config_path=adaptive_config_path
-                )
+                # Create quality thresholds with custom threshold
+                quality_thresholds = QualityThresholds()
+                quality_thresholds.overall_quality_threshold = quality_threshold
+                quality_metrics = StructureQualityAssessor(thresholds=quality_thresholds)
                 print("INFO: Phase 4 quality metrics enabled")
                 
             # Phase 4.2: Initialize advanced quality features if enabled

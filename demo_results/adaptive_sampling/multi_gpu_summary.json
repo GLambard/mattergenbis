@@ -1,0 +1,33 @@
+{
+  "total_jobs": 1,
+  "successful_jobs": 0,
+  "failed_jobs": 1,
+  "total_structures_requested": 48,
+  "total_structures_generated": 0,
+  "total_time_seconds": 8.093446493148804,
+  "throughput_structures_per_second": 0.0,
+  "total_batches": 4,
+  "gpu_utilization": {
+    "0": {
+      "jobs": 1,
+      "structures_generated": 0,
+      "total_duration": 8.093446493148804,
+      "successful_jobs": 0
+    }
+  },
+  "job_details": [
+    {
+      "job_id": 0,
+      "gpu_id": 0,
+      "success": false,
+      "duration": 8.093446493148804,
+      "structures_requested": 48,
+      "structures_generated": 0,
+      "batches": 4,
+      "output_path": "demo_results/adaptive_sampling/gpu_0",
+      "error": "Command '['/home/guillaume/Documents/Projects/LINK/Internships/Auguste/mattergenbis/.venv/bin/python', '-m', 'mattergen.scripts.generate', 'demo_results/adaptive_sampling/gpu_0', '--batch_size', '12', '--num_batches', '4', '--enable_multi_gpu', 'False', '--sampling-config-name', 'optimized_compatible', '--record-trajectories', 'False', '--print-loss', 'False', '--diffusion-loss-weight', '1.0', '--enable-optimizations', 'True', '--enable-mixed-precision', 'False', '--enable-model-compilation', 'True', '--enable-graph-caching', 'True', '--print-optimization-info', 'False', '--enable-phase4-features', 'True', '--enable-adaptive-sampling', 'True', '--enable-quality-metrics', 'True', '--quality-threshold', '0.8', '--max-adaptation-iterations', '3', '--enable-advanced-quality', 'False', '--enable-quality-prediction', 'False', '--enable-quality-reporting', 'False', '--enable-trend-analysis', 'False', '--quality-model-path', 'None', '--quality-report-format', 'json', '--enable-enterprise-monitoring', 'True', '--enable-enterprise-dashboard', 'False', '--enable-enterprise-analytics', 'False', '--enterprise-config-path', 'None', '--pretrained-name', 'mattergen_base']' returned non-zero exit status 1.",
+      "stdout": "MODELS_PROJECT_ROOT: /home/guillaume/Documents/Projects/LINK/Internships/Auguste/mattergenbis/mattergen\n",
+      "stderr": "/home/guillaume/Documents/Projects/LINK/Internships/Auguste/mattergenbis/.venv/lib/python3.10/site-packages/lightning_fabric/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  __import__(\"pkg_resources\").declare_namespace(__name__)\nTraceback (most recent call last):\n  File \"/home/guillaume/miniconda3/envs/mattergen/lib/python3.10/runpy.py\", line 196, in _run_module_as_main\n    return _run_code(code, main_globals, None,\n  File \"/home/guillaume/miniconda3/envs/mattergen/lib/python3.10/runpy.py\", line 86, in _run_code\n    exec(code, run_globals)\n  File \"/home/guillaume/Documents/Projects/LINK/Internships/Auguste/mattergenbis/mattergen/scripts/generate.py\", line 532, in <module>\n    _main()\n  File \"/home/guillaume/Documents/Projects/LINK/Internships/Auguste/mattergenbis/mattergen/scripts/generate.py\", line 528, in _main\n    fire.Fire(main)\n  File \"/home/guillaume/Documents/Projects/LINK/Internships/Auguste/mattergenbis/.venv/lib/python3.10/site-packages/fire/core.py\", line 135, in Fire\n    component_trace = _Fire(component, args, parsed_flag_args, context, name)\n  File \"/home/guillaume/Documents/Projects/LINK/Internships/Auguste/mattergenbis/.venv/lib/python3.10/site-packages/fire/core.py\", line 468, in _Fire\n    component, remaining_args = _CallAndUpdateTrace(\n  File \"/home/guillaume/Documents/Projects/LINK/Internships/Auguste/mattergenbis/.venv/lib/python3.10/site-packages/fire/core.py\", line 684, in _CallAndUpdateTrace\n    component = fn(*varargs, **kwargs)\n  File \"/home/guillaume/Documents/Projects/LINK/Internships/Auguste/mattergenbis/mattergen/scripts/generate.py\", line 197, in main\n    phase4_integration = Phase4IntegrationManager(\nTypeError: Phase4IntegrationManager.__init__() got an unexpected keyword argument 'enable_quality_metrics'\n"
+    }
+  ]
+}

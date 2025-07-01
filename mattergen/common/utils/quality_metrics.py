@@ -550,6 +550,74 @@ class StructureQualityAssessor:
             },
             'thresholds': self.thresholds.__dict__
         }
+    
+    def assess_structures(self, structures: List[Dict]) -> Tuple[float, Dict]:
+        """Assess quality for a batch of structures."""
+        if not structures:
+            return 0.0, {}
+        
+        total_quality = 0.0
+        quality_scores = []
+        structure_reports = {}
+        
+        for i, structure in enumerate(structures):
+            try:
+                metrics = self.assess_structure_quality(structure, structure_id=f"batch_struct_{i}")
+                quality_scores.append(metrics.overall_quality)
+                total_quality += metrics.overall_quality
+                
+                structure_reports[f"structure_{i}"] = {
+                    'overall_quality': metrics.overall_quality,
+                    'quality_level': metrics.quality_level.value,
+                    'is_valid': metrics.is_valid,
+                    'geometric_quality': metrics.geometric_quality,
+                    'physical_quality': metrics.physical_quality,
+                    'chemical_quality': metrics.chemical_quality
+                }
+            except Exception as e:
+                logger.warning(f"Failed to assess structure {i}: {e}")
+                quality_scores.append(0.0)
+        
+        average_quality = total_quality / len(structures) if structures else 0.0
+        
+        report = {
+            'average_quality': average_quality,
+            'quality_scores': quality_scores,
+            'num_structures': len(structures),
+            'structure_reports': structure_reports,
+            'quality_distribution': {
+                'excellent': sum(1 for q in quality_scores if q >= 0.9),
+                'good': sum(1 for q in quality_scores if 0.7 <= q < 0.9),
+                'acceptable': sum(1 for q in quality_scores if 0.5 <= q < 0.7),
+                'poor': sum(1 for q in quality_scores if q < 0.5)
+            }
+        }
+        
+        return average_quality, report
+    
+    def filter_structures(self, structures: List[Dict]) -> List[Dict]:
+        """Filter structures based on quality thresholds."""
+        if not structures:
+            return []
+        
+        filtered = []
+        for i, structure in enumerate(structures):
+            try:
+                metrics = self.assess_structure_quality(structure, structure_id=f"filter_struct_{i}")
+                
+                # Check if structure meets quality thresholds
+                if (metrics.overall_quality >= self.thresholds.min_overall_quality and
+                    metrics.is_valid and
+                    (not self.thresholds.require_valid_cell or not metrics.has_singular_cell) and
+                    (not self.thresholds.require_no_overlaps or not metrics.has_overlapping_atoms)):
+                    filtered.append(structure)
+                    
+            except Exception as e:
+                logger.warning(f"Failed to filter structure {i}: {e}")
+                # Skip invalid structures
+                continue
+        
+        return filtered
 
 
 # Factory function for easy integration

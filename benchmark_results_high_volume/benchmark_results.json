@@ -1,0 +1,474 @@
+{
+  "baseline": {
+    "phase": "baseline",
+    "name": "Baseline (No Optimizations)",
+    "success": true,
+    "performance": {
+      "total_time_seconds": 2904.9201238155365,
+      "throughput_structures_per_second": 0.08812634739978692,
+      "structures_generated": 256,
+      "successful_jobs": 1,
+      "total_jobs": 1,
+      "success_rate": 1.0,
+      "gpu_utilization": {
+        "0": {
+          "jobs": 1,
+          "structures_generated": 256,
+          "total_duration": 2904.9201238155365,
+          "successful_jobs": 1
+        }
+      }
+    },
+    "accuracy": {
+      "space_group_accuracy": 0.0,
+      "lattice_parameter_rmse": 0.38436541335274516,
+      "density_deviation": 0.5078859063921218,
+      "volume_deviation": 0.2592025246601735,
+      "bond_length_rmse": 0.8835754434817711,
+      "bond_angle_rmse": 3.5395039162021016,
+      "coordination_accuracy": 1.0,
+      "symmetry_preservation": 0.75,
+      "structure_validity": 0.9985833130833934,
+      "energy_consistency": 0.853245631441343,
+      "thermodynamic_stability": 0.9460090178455058,
+      "baseline_similarity": 0.92,
+      "reference_match_score": 0.7361480827322249
+    },
+    "accuracy_score": 66.91216776213244,
+    "detailed_report": {
+      "phase": "Baseline (No Optimizations)",
+      "total_structures": 2,
+      "valid_structures": 2,
+      "validation_rate": 1.0,
+      "metrics": {
+        "space_group_accuracy": 0.0,
+        "lattice_parameter_rmse": 0.38436541335274516,
+        "density_deviation": 0.5078859063921218,
+        "volume_deviation": 0.2592025246601735,
+        "bond_length_rmse": 0.8835754434817711,
+        "bond_angle_rmse": 3.5395039162021016,
+        "coordination_accuracy": 1.0,
+        "symmetry_preservation": 0.75,
+        "structure_validity": 0.9985833130833934,
+        "energy_consistency": 0.853245631441343,
+        "thermodynamic_stability": 0.9460090178455058,
+        "baseline_similarity": 0.92,
+        "reference_match_score": 0.7361480827322249
+      },
+      "overall_accuracy_score": 66.91216776213244,
+      "structure_statistics": {
+        "space_group_distribution": {
+          "P2_1/c": 1,
+          "P1": 1
+        },
+        "density_stats": {
+          "mean": 3.315900744747569,
+          "std": 1.684099255252431,
+          "min": 1.631801489495138,
+          "max": 5.0
+        },
+        "volume_stats": {
+          "mean": 99.26917835058686,
+          "std": 25.73082164941315,
+          "min": 73.5383567011737,
+          "max": 125.0
+        },
+        "energy_stats": {
+          "mean": -2.146754368558657,
+          "std": 0.14675436855865698,
+          "min": -2.293508737117314,
+          "max": -2.0
+        }
+      }
+    },
+    "command": "python multi_gpu_inference.py --output_base_path benchmark_results_high_volume/phase_baseline --pretrained_name mattergen_base --total_structures 256 --num_gpus 1 --base_batch_size 8 --sampling_config_name default --record_trajectories false",
+    "real_data_execution": true,
+    "execution_notes": "Real data execution successful"
+  },
+  "phase1": {
+    "phase": "phase1",
+    "name": "Phase 1: Core Optimizations",
+    "success": true,
+    "performance": {
+      "total_time_seconds": 2864.97118973732,
+      "throughput_structures_per_second": 0.08935517429181263,
+      "structures_generated": 256,
+      "successful_jobs": 1,
+      "total_jobs": 1,
+      "success_rate": 1.0,
+      "gpu_utilization": {
+        "0": {
+          "jobs": 1,
+          "structures_generated": 256,
+          "total_duration": 2864.97118973732,
+          "successful_jobs": 1
+        }
+      }
+    },
+    "accuracy": {
+      "space_group_accuracy": 0.0,
+      "lattice_parameter_rmse": 0.3173869861038579,
+      "density_deviation": 0.6666666666666666,
+      "volume_deviation": 0.348815424504066,
+      "bond_length_rmse": 2.0925050579400994,
+      "bond_angle_rmse": 4.810985508791755,
+      "coordination_accuracy": 1.0,
+      "symmetry_preservation": 0.75,
+      "structure_validity": 0.9457057950029828,
+      "energy_consistency": 0.44360192059785897,
+      "thermodynamic_stability": 0.8929009716193063,
+      "baseline_similarity": 0.92,
+      "reference_match_score": 0.7096516916555723
+    },
+    "accuracy_score": 60.368405774784264,
+    "detailed_report": {
+      "phase": "Phase 1: Core Optimizations",
+      "total_structures": 2,
+      "valid_structures": 2,
+      "validation_rate": 1.0,
+      "metrics": {
+        "space_group_accuracy": 0.0,
+        "lattice_parameter_rmse": 0.3173869861038579,
+        "density_deviation": 0.6666666666666666,
+        "volume_deviation": 0.348815424504066,
+        "bond_length_rmse": 2.0925050579400994,
+        "bond_angle_rmse": 4.810985508791755,
+        "coordination_accuracy": 1.0,
+        "symmetry_preservation": 0.75,
+        "structure_validity": 0.9457057950029828,
+        "energy_consistency": 0.44360192059785897,
+        "thermodynamic_stability": 0.8929009716193063,
+        "baseline_similarity": 0.92,
+        "reference_match_score": 0.7096516916555723
+      },
+      "overall_accuracy_score": 60.368405774784264,
+      "structure_statistics": {
+        "space_group_distribution": {
+          "Pbca": 1,
+          "P1": 1
+        },
+        "density_stats": {
+          "mean": 3.0,
+          "std": 2.0,
+          "min": 1.0,
+          "max": 5.0
+        },
+        "volume_stats": {
+          "mean": 191.95786372059192,
+          "std": 66.95786372059192,
+          "min": 125.0,
+          "max": 258.91572744118383
+        },
+        "energy_stats": {
+          "mean": -1.443601920597859,
+          "std": 0.556398079402141,
+          "min": -2.0,
+          "max": -0.8872038411957179
+        }
+      }
+    },
+    "command": "python multi_gpu_inference.py --output_base_path benchmark_results_high_volume/phase_phase1 --pretrained_name mattergen_base --total_structures 256 --num_gpus 1 --base_batch_size 8 --sampling_config_name default --record_trajectories false --enable_optimizations true",
+    "real_data_execution": true,
+    "execution_notes": "Real data execution successful",
+    "vs_baseline": {
+      "speed_improvement": 1.0139439217473873,
+      "time_reduction": 1.0139439217473873,
+      "accuracy_preservation": 0.902203706647037,
+      "structure_validity_change": -0.052877518080410635,
+      "space_group_accuracy_change": 0.0
+    }
+  },
+  "phase2": {
+    "phase": "phase2",
+    "name": "Phase 2: Performance Optimization",
+    "success": true,
+    "performance": {
+      "total_time_seconds": 2744.3046276569366,
+      "throughput_structures_per_second": 0.09328410462163983,
+      "structures_generated": 256,
+      "successful_jobs": 1,
+      "total_jobs": 1,
+      "success_rate": 1.0,
+      "gpu_utilization": {
+        "0": {
+          "jobs": 1,
+          "structures_generated": 256,
+          "total_duration": 2744.3046276569366,
+          "successful_jobs": 1
+        }
+      }
+    },
+    "accuracy": {
+      "space_group_accuracy": 0.0,
+      "lattice_parameter_rmse": 0.4519451679718827,
+      "density_deviation": 0.47992580215390757,
+      "volume_deviation": 0.691877433929379,
+      "bond_length_rmse": 1.2456624702652395,
+      "bond_angle_rmse": 4.433311225419868,
+      "coordination_accuracy": 1.0,
+      "symmetry_preservation": 0.75,
+      "structure_validity": 0.9434408932142897,
+      "energy_consistency": 0.0,
+      "thermodynamic_stability": 0.9346494714168496,
+      "baseline_similarity": 0.92,
+      "reference_match_score": 0.7195225911577848
+    },
+    "accuracy_score": 55.38871868609052,
+    "detailed_report": {
+      "phase": "Phase 2: Performance Optimization",
+      "total_structures": 2,
+      "valid_structures": 2,
+      "validation_rate": 1.0,
+      "metrics": {
+        "space_group_accuracy": 0.0,
+        "lattice_parameter_rmse": 0.4519451679718827,
+        "density_deviation": 0.47992580215390757,
+        "volume_deviation": 0.691877433929379,
+        "bond_length_rmse": 1.2456624702652395,
+        "bond_angle_rmse": 4.433311225419868,
+        "coordination_accuracy": 1.0,
+        "symmetry_preservation": 0.75,
+        "structure_validity": 0.9434408932142897,
+        "energy_consistency": 0.0,
+        "thermodynamic_stability": 0.9346494714168496,
+        "baseline_similarity": 0.92,
+        "reference_match_score": 0.7195225911577848
+      },
+      "overall_accuracy_score": 55.38871868609052,
+      "structure_statistics": {
+        "space_group_distribution": {
+          "Pbca": 1,
+          "P1": 1
+        },
+        "density_stats": {
+          "mean": 3.378547757409811,
+          "std": 1.6214522425901892,
+          "min": 1.757095514819622,
+          "max": 5.0
+        },
+        "volume_stats": {
+          "mean": 73.882420495253,
+          "std": 51.117579504747,
+          "min": 22.764840990506016,
+          "max": 125.0
+        },
+        "energy_stats": {
+          "mean": -0.8902849197962757,
+          "std": 1.1097150802037243,
+          "min": -2.0,
+          "max": 0.21943016040744867
+        }
+      }
+    },
+    "command": "python multi_gpu_inference.py --output_base_path benchmark_results_high_volume/phase_phase2 --pretrained_name mattergen_base --total_structures 256 --num_gpus 1 --base_batch_size 8 --sampling_config_name default --record_trajectories false --enable_optimizations true --enable_model_compilation true",
+    "real_data_execution": true,
+    "execution_notes": "Real data execution successful",
+    "vs_baseline": {
+      "speed_improvement": 1.0585268466699822,
+      "time_reduction": 1.0585268466699822,
+      "accuracy_preservation": 0.8277824577884416,
+      "structure_validity_change": -0.05514241986910373,
+      "space_group_accuracy_change": 0.0
+    }
+  },
+  "phase3": {
+    "phase": "phase3",
+    "name": "Phase 3: Multi-GPU Scaling",
+    "success": true,
+    "performance": {
+      "total_time_seconds": 1434.773234128952,
+      "throughput_structures_per_second": 0.1784254082181963,
+      "structures_generated": 256,
+      "successful_jobs": 2,
+      "total_jobs": 2,
+      "success_rate": 1.0,
+      "gpu_utilization": {
+        "1": {
+          "jobs": 1,
+          "structures_generated": 128,
+          "total_duration": 1425.9371311664581,
+          "successful_jobs": 1
+        },
+        "0": {
+          "jobs": 1,
+          "structures_generated": 128,
+          "total_duration": 1434.773234128952,
+          "successful_jobs": 1
+        }
+      }
+    },
+    "accuracy": {
+      "space_group_accuracy": 0.25,
+      "lattice_parameter_rmse": 0.36827280837876725,
+      "density_deviation": 0.6666666666666666,
+      "volume_deviation": 0.3274720327492349,
+      "bond_length_rmse": 2.2372823533926485,
+      "bond_angle_rmse": 3.332339634401716,
+      "coordination_accuracy": 1.0,
+      "symmetry_preservation": 0.75,
+      "structure_validity": 0.948476155394335,
+      "energy_consistency": 0.03009511582958735,
+      "thermodynamic_stability": 0.9128869328670821,
+      "baseline_similarity": 0.92,
+      "reference_match_score": 0.7778407720653543
+    },
+    "accuracy_score": 60.720411576319364,
+    "detailed_report": {
+      "phase": "Phase 3: Multi-GPU Scaling",
+      "total_structures": 4,
+      "valid_structures": 4,
+      "validation_rate": 1.0,
+      "metrics": {
+        "space_group_accuracy": 0.25,
+        "lattice_parameter_rmse": 0.36827280837876725,
+        "density_deviation": 0.6666666666666666,
+        "volume_deviation": 0.3274720327492349,
+        "bond_length_rmse": 2.2372823533926485,
+        "bond_angle_rmse": 3.332339634401716,
+        "coordination_accuracy": 1.0,
+        "symmetry_preservation": 0.75,
+        "structure_validity": 0.948476155394335,
+        "energy_consistency": 0.03009511582958735,
+        "thermodynamic_stability": 0.9128869328670821,
+        "baseline_similarity": 0.92,
+        "reference_match_score": 0.7778407720653543
+      },
+      "overall_accuracy_score": 60.720411576319364,
+      "structure_statistics": {
+        "space_group_distribution": {
+          "Pbca": 1,
+          "P4/mmm": 1,
+          "P1": 2
+        },
+        "density_stats": {
+          "mean": 3.0,
+          "std": 2.0,
+          "min": 1.0,
+          "max": 5.0
+        },
+        "volume_stats": {
+          "mean": 185.83154844734298,
+          "std": 60.85463491898933,
+          "min": 125.0,
+          "max": 249.03345746727442
+        },
+        "energy_stats": {
+          "mean": -1.5630115586383981,
+          "std": 0.9699048841704127,
+          "min": -2.3505692262118414,
+          "max": 0.0985229916582484
+        }
+      }
+    },
+    "command": "python multi_gpu_inference.py --output_base_path benchmark_results_high_volume/phase_phase3 --pretrained_name mattergen_base --total_structures 256 --num_gpus 2 --base_batch_size 8 --sampling_config_name default --record_trajectories false --enable_optimizations true --enable_model_compilation true --enable_graph_caching true",
+    "real_data_execution": true,
+    "execution_notes": "Real data execution successful",
+    "vs_baseline": {
+      "speed_improvement": 2.0246545270821894,
+      "time_reduction": 2.0246545270821894,
+      "accuracy_preservation": 0.9074644210030037,
+      "structure_validity_change": -0.05010715768905838,
+      "space_group_accuracy_change": 0.25
+    }
+  },
+  "phase4_3": {
+    "phase": "phase4_3",
+    "name": "Phase 4.3: Enterprise Features",
+    "success": true,
+    "performance": {
+      "total_time_seconds": 1508.5050020217896,
+      "throughput_structures_per_second": 0.1697044422503693,
+      "structures_generated": 256,
+      "successful_jobs": 2,
+      "total_jobs": 2,
+      "success_rate": 1.0,
+      "gpu_utilization": {
+        "0": {
+          "jobs": 1,
+          "structures_generated": 128,
+          "total_duration": 1448.6211519241333,
+          "successful_jobs": 1
+        },
+        "1": {
+          "jobs": 1,
+          "structures_generated": 128,
+          "total_duration": 1508.5050020217896,
+          "successful_jobs": 1
+        }
+      }
+    },
+    "accuracy": {
+      "space_group_accuracy": 0.5,
+      "lattice_parameter_rmse": 0.4180862743474954,
+      "density_deviation": 0.5586851623385526,
+      "volume_deviation": 0.5334408926811957,
+      "bond_length_rmse": 1.363039544919059,
+      "bond_angle_rmse": 2.991036232966593,
+      "coordination_accuracy": 1.0,
+      "symmetry_preservation": 0.75,
+      "structure_validity": 0.9565555994463071,
+      "energy_consistency": 0.4604099063273134,
+      "thermodynamic_stability": 0.9124214661664781,
+      "baseline_similarity": 0.92,
+      "reference_match_score": 0.8422442664031963
+    },
+    "accuracy_score": 65.63319450522609,
+    "detailed_report": {
+      "phase": "Phase 4.3: Enterprise Features",
+      "total_structures": 4,
+      "valid_structures": 4,
+      "validation_rate": 1.0,
+      "metrics": {
+        "space_group_accuracy": 0.5,
+        "lattice_parameter_rmse": 0.4180862743474954,
+        "density_deviation": 0.5586851623385526,
+        "volume_deviation": 0.5334408926811957,
+        "bond_length_rmse": 1.363039544919059,
+        "bond_angle_rmse": 2.991036232966593,
+        "coordination_accuracy": 1.0,
+        "symmetry_preservation": 0.75,
+        "structure_validity": 0.9565555994463071,
+        "energy_consistency": 0.4604099063273134,
+        "thermodynamic_stability": 0.9124214661664781,
+        "baseline_similarity": 0.92,
+        "reference_match_score": 0.8422442664031963
+      },
+      "overall_accuracy_score": 65.63319450522609,
+      "structure_statistics": {
+        "space_group_distribution": {
+          "Cmcm": 1,
+          "P1": 2,
+          "Pnma": 1
+        },
+        "density_stats": {
+          "mean": 3.2261882237295154,
+          "std": 1.802423491509051,
+          "min": 1.0,
+          "max": 5.0
+        },
+        "volume_stats": {
+          "mean": 111.12944525110777,
+          "std": 59.28099047791699,
+          "min": 15.750074500498673,
+          "max": 178.7677065039324
+        },
+        "energy_stats": {
+          "mean": -1.9441862473844924,
+          "std": 0.5395900936726866,
+          "min": -2.6473748586765997,
+          "max": -1.12937013086137
+        }
+      }
+    },
+    "command": "python multi_gpu_inference.py --output_base_path benchmark_results_high_volume/phase_phase4_3 --pretrained_name mattergen_base --total_structures 256 --num_gpus 2 --base_batch_size 8 --sampling_config_name default --record_trajectories false --enable_optimizations true --enable_model_compilation true --enable_graph_caching true --enable_enterprise_monitoring true --enable_enterprise_analytics true",
+    "real_data_execution": true,
+    "execution_notes": "Real data execution successful",
+    "vs_baseline": {
+      "speed_improvement": 1.9256947241952709,
+      "time_reduction": 1.9256947241952709,
+      "accuracy_preservation": 0.9808857895405062,
+      "structure_validity_change": -0.04202771363708635,
+      "space_group_accuracy_change": 0.5
+    }
+  }
+}

@@ -11,13 +11,14 @@ import pandas as pd
 from pathlib import Path
 import json
 import time
+import random
+import hashlib
+import zipfile
 from typing import Dict, List, Tuple, Any
 import subprocess
 import logging
 from dataclasses import dataclass
 from concurrent.futures import ProcessPoolExecutor
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
@@ -1181,41 +1182,41 @@ class CrystallineAccuracyValidator:
             return False
     
 def create_comprehensive_benchmark_suite():
-    """Create comprehensive benchmark validation suite."""
+    """Create comprehensive benchmark validation suite with high-volume structure counts for robust statistical validation."""
     
     benchmark_config = {
         'phases': {
             'baseline': {
                 'name': 'Baseline (No Optimizations)',
-                'structures': 16,
+                'structures': 256,  # Increased from 16 for robust statistical validation
                 'gpus': 1,
-                'batch_size': 4,
+                'batch_size': 8,  # Increased from 4 for better efficiency
                 'features': []
             },
             'phase1': {
                 'name': 'Phase 1: Core Optimizations',
-                'structures': 16,
+                'structures': 256,  # Increased from 16 for robust statistical validation
                 'gpus': 1,
                 'batch_size': 8,
                 'features': ['enable_optimizations']
             },
             'phase2': {
                 'name': 'Phase 2: Performance Optimization',
-                'structures': 16,
+                'structures': 256,  # Increased from 16 for robust statistical validation
                 'gpus': 1,
                 'batch_size': 8,
                 'features': ['enable_optimizations', 'enable_model_compilation']
             },
             'phase3': {
                 'name': 'Phase 3: Multi-GPU Scaling',
-                'structures': 32,
+                'structures': 256,  # Increased from 32 for robust statistical validation
                 'gpus': 2,
                 'batch_size': 8,
                 'features': ['enable_optimizations', 'enable_model_compilation', 'enable_graph_caching']
             },
             'phase4_3': {
                 'name': 'Phase 4.3: Enterprise Features',
-                'structures': 32,
+                'structures': 256,  # Increased from 32 for robust statistical validation
                 'gpus': 2,
                 'batch_size': 8,
                 'features': ['enable_optimizations', 'enable_model_compilation', 'enable_graph_caching',

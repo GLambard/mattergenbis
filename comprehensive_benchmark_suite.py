@@ -31,7 +31,7 @@ class ComprehensiveBenchmarkRunner:
     """Runs comprehensive benchmarks with both performance and accuracy validation."""
     
     def __init__(self, output_dir: str = "benchmark_results", test_mode: bool = False, 
-                 timeout_minutes: int = 20, skip_existing: bool = True):
+                 timeout_minutes: int = 60, skip_existing: bool = True):  # Increased timeout for 256 structures
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         self.test_mode = test_mode

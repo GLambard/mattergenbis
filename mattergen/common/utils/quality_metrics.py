@@ -117,10 +117,15 @@ class StructureQualityAssessor:
         start_time = time.time()
         
         try:
-            # Extract structure properties
-            cell_matrix = structure_data.get('cell', np.eye(3))
-            positions = structure_data.get('positions', [])
-            atomic_numbers = structure_data.get('atomic_numbers', [])
+            # Extract structure properties from ASE Atoms object or dictionary
+            if hasattr(structure_data, 'get_cell'):  # ASE Atoms object
+                cell_matrix = structure_data.get_cell()
+                positions = structure_data.get_positions()
+                atomic_numbers = structure_data.get_atomic_numbers()
+            else:  # Dictionary format
+                cell_matrix = structure_data.get('cell', np.eye(3))
+                positions = structure_data.get('positions', [])
+                atomic_numbers = structure_data.get('atomic_numbers', [])
             
             # Perform quality assessments
             geometric_metrics = self._assess_geometric_quality(cell_matrix, positions)

@@ -65,6 +65,9 @@ class AdaptiveSamplingConfig:
     convergence_window: int = 10
     quality_window: int = 5
     
+    # Iteration control
+    max_iterations: int = 5
+    
     def __post_init__(self):
         if self.progressive_stages is None:
             self.progressive_stages = [50, 100, 200]
@@ -277,6 +280,64 @@ class AdaptiveSampler:
         
         logger.info(f"Adaptive sampling report saved to: {report_path}")
 
+    def adapt_parameters(self, structures, quality_score: float, current_guidance_factor: float, iteration: int) -> Dict[str, Any]:
+        """
+        Adapt sampling parameters based on current structures and quality.
+        
+        Args:
+            structures: List of generated structures
+            quality_score: Average quality score of current structures
+            current_guidance_factor: Current guidance factor value
+            iteration: Current adaptation iteration
+            
+        Returns:
+            Dict containing new_guidance_factor and should_continue
+        """
+        # Create metrics for convergence detection
+        metrics = ConvergenceMetrics(
+            step=iteration,
+            loss_value=1.0 - quality_score,  # Convert quality to loss-like metric
+            loss_change=0.0,  # Would need to track from previous iteration
+            gradient_norm=0.0,  # Not available in this context
+            structure_stability=quality_score,
+            quality_score=quality_score,
+            convergence_rate=0.0,  # Would be calculated by convergence detector
+            early_stop_score=quality_score
+        )
+        
+        # Update convergence detection
+        converged = self.convergence_detector.update_metrics(metrics)
+        
+        # Adapt sampling steps based on quality
+        new_steps = self.adapt_sampling_steps(metrics, target_quality=self.config.quality_threshold)
+        
+        # Adjust guidance factor based on quality and convergence
+        new_guidance_factor = current_guidance_factor
+        
+        if quality_score < self.config.quality_threshold:
+            # Increase guidance if quality is low
+            new_guidance_factor = min(current_guidance_factor * 1.1, 2.0)
+            logger.info(f"Increasing guidance factor from {current_guidance_factor:.3f} to {new_guidance_factor:.3f} (low quality: {quality_score:.3f})")
+        elif converged or quality_score > 0.8:
+            # Reduce guidance if converged or quality is high
+            new_guidance_factor = max(current_guidance_factor * 0.9, 0.5)
+            logger.info(f"Reducing guidance factor from {current_guidance_factor:.3f} to {new_guidance_factor:.3f} (quality: {quality_score:.3f})")
+        
+        # Determine if we should continue
+        should_continue = not converged and iteration < self.config.max_iterations
+        
+        # Update stats
+        self.update_sampling_stats(len(structures), early_stopped=converged)
+        
+        return {
+            'new_guidance_factor': new_guidance_factor,
+            'should_continue': should_continue,
+            'adapted_steps': new_steps,
+            'quality_score': quality_score,
+            'converged': converged,
+            'iteration': iteration
+        }
+    
 
 def create_quality_metrics(structure_data: Dict, loss_value: float, step: int) -> ConvergenceMetrics:
     """Create quality metrics from structure data and training info."""

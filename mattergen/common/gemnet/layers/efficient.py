@@ -71,7 +71,7 @@ class EfficientInteractionDownProjection(torch.nn.Module):
 
         # Zero padded dense matrix
         # maximum number of neighbors, catch empty id_ca with maximum
-        if sph.shape[0] == 0:
+        if sph.shape[0] == 0 or id_ragged_idx.numel() == 0:
             Kmax = 0
         else:
             Kmax = torch.max(
@@ -154,10 +154,14 @@ class EfficientInteractionBilinear(torch.nn.Module):
             return torch.zeros((0, 0))
 
         # Create (zero-padded) dense matrix of the neighboring edge embeddings.
-        Kmax = torch.max(
-            torch.max(id_ragged_idx) + 1,
-            torch.tensor(0).to(id_ragged_idx.device),
-        )
+        # Handle empty id_ragged_idx tensor
+        if id_ragged_idx.numel() == 0:
+            Kmax = torch.tensor(1).to(id_ragged_idx.device)
+        else:
+            Kmax = torch.max(
+                torch.max(id_ragged_idx) + 1,
+                torch.tensor(0).to(id_ragged_idx.device),
+            )
         # maximum number of neighbors, catch empty id_reduce_ji with maximum
         m2 = m.new_zeros(nEdges, Kmax, self.emb_size)
         m2[id_reduce, id_ragged_idx] = m

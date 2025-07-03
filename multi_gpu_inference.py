@@ -215,6 +215,56 @@ def consolidate_results(job_results: List[Dict], output_base_path: str) -> None:
     logger.info(f"Throughput: {summary['throughput_structures_per_second']:.3f} structures/second")
 
 
+def _validate_feature_dependencies(args):
+    """Validate feature dependencies and provide modular support."""
+    
+    # Features that require Phase 4 framework
+    phase4_dependent_features = [
+        'enable_adaptive_sampling',
+        'enable_quality_prediction'  # Requires adaptive feedback loop
+    ]
+    
+    # Features that can work independently (standalone)
+    standalone_features = [
+        'enable_quality_metrics',
+        'enable_advanced_quality', 
+        'enable_quality_reporting',
+        'enable_trend_analysis',
+        'enable_enterprise_monitoring',
+        'enable_enterprise_dashboard',
+        'enable_enterprise_analytics'
+    ]
+    
+    # Check Phase 4 dependent features
+    for feature in phase4_dependent_features:
+        if getattr(args, feature) and not args.enable_phase4_features:
+            logger.error(f"❌ {feature} requires --enable_phase4_features true")
+            raise ValueError(f"{feature} requires Phase 4 framework to be enabled")
+    
+    # Parameters that only make sense with Phase 4 adaptive sampling
+    adaptive_only_params = [
+        ('quality_threshold', args.quality_threshold != 0.7),  # Non-default value
+        ('max_adaptation_iterations', args.max_adaptation_iterations != 5)  # Non-default value
+    ]
+    
+    for param_name, has_custom_value in adaptive_only_params:
+        if has_custom_value and not args.enable_adaptive_sampling:
+            logger.warning(f"⚠️  {param_name} specified but adaptive sampling is disabled - parameter will be ignored")
+    
+    # Log modular feature usage
+    enabled_standalone = [feature for feature in standalone_features if getattr(args, feature)]
+    enabled_phase4_dependent = [feature for feature in phase4_dependent_features if getattr(args, feature)]
+    
+    if enabled_standalone and not args.enable_phase4_features:
+        logger.info(f"✅ Standalone features enabled: {enabled_standalone}")
+        logger.info("ℹ️  These features will work independently without Phase 4 adaptive sampling")
+    
+    if enabled_phase4_dependent:
+        logger.info(f"🚀 Phase 4 dependent features enabled: {enabled_phase4_dependent}")
+        if not args.enable_phase4_features:
+            logger.error("❌ Phase 4 features required but Phase 4 framework is disabled")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Multi-GPU Inference Launcher for MatterGen - Production Ready",
@@ -372,6 +422,9 @@ Production Examples:
     for arg_name in bool_args:
         setattr(args, arg_name, getattr(args, arg_name).lower() == 'true')
     
+    # Validate modular feature dependencies
+    _validate_feature_dependencies(args)
+    
     # Get available GPUs
     available_gpus = get_available_gpus()
     num_gpus = args.num_gpus if args.num_gpus is not None else len(available_gpus)
@@ -410,20 +463,20 @@ Production Examples:
             'enable_model_compilation': args.enable_model_compilation,
             'enable_graph_caching': args.enable_graph_caching,
             'print_optimization_info': args.print_optimization_info,
-            # Phase 4 options
+            # Phase 4 options  
             'enable_phase4_features': args.enable_phase4_features,
             'enable_adaptive_sampling': args.enable_adaptive_sampling,
             'enable_quality_metrics': args.enable_quality_metrics,
             'quality_threshold': args.quality_threshold,
             'max_adaptation_iterations': args.max_adaptation_iterations,
-            # Phase 4.2 Advanced Quality options
+            # Phase 4.2 Advanced Quality options (can work standalone)
             'enable_advanced_quality': args.enable_advanced_quality,
             'enable_quality_prediction': args.enable_quality_prediction,
             'enable_quality_reporting': args.enable_quality_reporting,
             'enable_trend_analysis': args.enable_trend_analysis,
             'quality_model_path': args.quality_model_path,
             'quality_report_format': args.quality_report_format,
-            # Phase 4.3 Enterprise options
+            # Phase 4.3 Enterprise options (can work standalone)
             'enable_enterprise_monitoring': args.enable_enterprise_monitoring,
             'enable_enterprise_dashboard': args.enable_enterprise_dashboard,
             'enable_enterprise_analytics': args.enable_enterprise_analytics,

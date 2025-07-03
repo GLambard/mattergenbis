@@ -182,12 +182,27 @@ def main(
             print(f"WARNING: Phase 3 optimizations not available: {e}")
             enable_phase3_optimizations = False
 
-    # Phase 4: Initialize adaptive sampling and quality metrics if enabled
+    # Initialize features - both Phase 4 integrated and standalone modes
     adaptive_sampler = None
     quality_metrics = None
     phase4_integration = None
+    standalone_quality_assessor = None
+    standalone_enterprise_manager = None
+    
+    # Initialize quality reporting variables to ensure they exist in all scopes
+    advanced_quality_metrics = None
+    quality_reporter = None
+    
+    # Initialize Phase 4 tracking variables
+    total_generated = 0
+    adaptation_iteration = 0
+    
+    # Check if we're using standalone features (without Phase 4)
+    enable_standalone_quality = enable_quality_metrics and not enable_phase4_features
+    enable_standalone_enterprise = enable_enterprise_monitoring and not enable_phase4_features
     
     if enable_phase4_features:
+        print("INFO: Initializing Phase 4 integrated features")
         try:
             from mattergen.common.utils.phase4_integration import Phase4IntegrationManager
             from mattergen.common.utils.adaptive_sampler import AdaptiveSampler, AdaptiveSamplingConfig
@@ -284,6 +299,73 @@ def main(
             print(f"WARNING: Failed to initialize enterprise features: {e}")
             enterprise_manager = None
 
+    # Standalone features initialization (when Phase 4 is disabled)
+    elif enable_standalone_quality or enable_standalone_enterprise:
+        print("INFO: Initializing standalone features (Phase 4 disabled)")
+        
+        # Standalone quality assessment
+        if enable_standalone_quality:
+            try:
+                from mattergen.common.utils.quality_metrics import StructureQualityAssessor, QualityThresholds
+                
+                # Create quality thresholds
+                quality_thresholds = QualityThresholds()
+                if hasattr(globals(), 'quality_threshold'):
+                    quality_thresholds.overall_quality_threshold = quality_threshold
+                
+                standalone_quality_assessor = StructureQualityAssessor(thresholds=quality_thresholds)
+                print("✅ Standalone quality assessment enabled")
+                
+                # Initialize standalone quality reporting if enabled
+                if enable_quality_reporting:
+                    try:
+                        from mattergen.common.utils.quality_reporting import QualityReporter
+                        quality_reporter = QualityReporter(
+                            output_dir=output_path,
+                            enable_visualizations=True
+                        )
+                        print("✅ Standalone quality reporting enabled")
+                    except ImportError as e:
+                        print(f"WARNING: Quality reporting not available: {e}")
+                        enable_quality_reporting = False
+                        quality_reporter = None
+                
+            except ImportError as e:
+                print(f"WARNING: Standalone quality features not available: {e}")
+                enable_quality_metrics = False
+                enable_advanced_quality = False
+                enable_quality_reporting = False
+        
+        # Standalone enterprise monitoring
+        if enable_standalone_enterprise:
+            try:
+                from mattergen.enterprise.integration import initialize_enterprise, start_enterprise
+                
+                # Load enterprise configuration
+                enterprise_config = {}
+                if enterprise_config_path:
+                    import json
+                    with open(enterprise_config_path, 'r') as f:
+                        enterprise_config = json.load(f)
+                
+                # Initialize standalone enterprise monitoring
+                standalone_enterprise_manager = initialize_enterprise(
+                    config=enterprise_config,
+                    enable_monitoring=enable_enterprise_monitoring,
+                    enable_dashboard=enable_enterprise_dashboard,
+                    enable_analytics=enable_enterprise_analytics
+                )
+                
+                # Start enterprise services
+                start_enterprise()
+                print("✅ Standalone enterprise monitoring enabled")
+                
+            except ImportError as e:
+                print(f"WARNING: Standalone enterprise features not available: {e}")
+                enable_enterprise_monitoring = False
+                enable_enterprise_dashboard = False
+                enable_enterprise_analytics = False
+
     try:
         # Phase 4: Adaptive generation with quality assessment
         if enable_phase4_features and (adaptive_sampler or quality_metrics):
@@ -291,8 +373,6 @@ def main(
             
             # Initialize generation parameters
             current_guidance_factor = diffusion_guidance_factor if diffusion_guidance_factor is not None else 0.0
-            total_generated = 0
-            adaptation_iteration = 0
             
             while total_generated < (batch_size * num_batches) and adaptation_iteration < max_adaptation_iterations:
                 print(f"\nAdaptation iteration {adaptation_iteration + 1}/{max_adaptation_iterations}")
@@ -483,8 +563,8 @@ def main(
         if not enable_phase4_features or not (adaptive_sampler or quality_metrics):
             print(f"\nGeneration complete! Generated {len(generated_structures)} structures.")
         
-        # Phase 4.2: Generate final quality report if enabled
-        if enable_quality_reporting and quality_reporter and enable_phase4_features:
+        # Generate final quality report if enabled (works in both Phase 4 and standalone modes)
+        if enable_quality_reporting and quality_reporter:
             try:
                 print("\nGenerating comprehensive quality report...")
                 
@@ -492,6 +572,15 @@ def main(
                 quality_data = {}
                 if advanced_quality_metrics:
                     quality_data = advanced_quality_metrics.get_comprehensive_results()
+                elif enable_phase4_features and advanced_quality_metrics:
+                    quality_data = advanced_quality_metrics.get_comprehensive_results()
+                else:
+                    # Standalone mode - create basic quality data from generated structures
+                    quality_data = {
+                        'total_structures': len(generated_structures),
+                        'generation_mode': 'standalone',
+                        'structures': []
+                    }
                 
                 # Generate comprehensive report
                 report = quality_reporter.generate_report_from_quality_data(

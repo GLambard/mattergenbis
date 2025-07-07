@@ -63,22 +63,30 @@ def run_single_gpu_job(args: Dict[str, Any]) -> Dict[str, Any]:
     output_path = args['output_path']
     structures_for_this_gpu = args['structures_for_this_gpu']
     batch_size = args['batch_size']
+    timeout_seconds = args.get('timeout_seconds', 600)  # Get timeout from args
     mattergen_args = args['mattergen_args']
     
     start_time = time.time()
     
     # Calculate batches needed for this GPU
-    batches_needed = max(1, (structures_for_this_gpu + batch_size - 1) // batch_size)
+    # Adjust batch size to not exceed structures needed for this GPU
+    effective_batch_size = min(batch_size, structures_for_this_gpu)
+    batches_needed = max(1, (structures_for_this_gpu + effective_batch_size - 1) // effective_batch_size)
     
     # Set CUDA_VISIBLE_DEVICES to restrict to this GPU
     env = os.environ.copy()
     env['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
     
     # Build the command with consistent parameter names
+    # Use the current working directory's Python executable to ensure correct environment
+    python_executable = os.path.join(os.getcwd(), '.venv', 'bin', 'python')
+    if not os.path.exists(python_executable):
+        python_executable = sys.executable  # fallback to current interpreter
+    
     cmd = [
-        sys.executable, '-m', 'mattergen.scripts.generate',
+        python_executable, '-m', 'mattergen.scripts.generate',
         output_path,
-        '--batch_size', str(batch_size),
+        '--batch_size', str(effective_batch_size),
         '--num_batches', str(batches_needed),
         '--enable_multi_gpu', 'False',  # Disable multi-GPU for single-GPU jobs
     ]
@@ -92,19 +100,32 @@ def run_single_gpu_job(args: Dict[str, Any]) -> Dict[str, Any]:
         cli_key = key.replace('_', '-')
         cmd.extend([f'--{cli_key}', str(value)])
     
-    logger.info(f"GPU {gpu_id} Job {job_id}: Starting {structures_for_this_gpu} structures ({batches_needed} batches)")
-    logger.debug(f"GPU {gpu_id} Job {job_id}: Command: {' '.join(cmd)}")
+    logger.info(f"GPU {gpu_id} Job {job_id}: Starting {structures_for_this_gpu} structures ({batches_needed} batches, effective batch size: {effective_batch_size})")
+    logger.info(f"GPU {gpu_id} Job {job_id}: Command: {' '.join(cmd)}")
     
     try:
-        # Run the command
-        result = subprocess.run(
-            cmd,
-            env=env,
-            capture_output=True,
-            text=True,
-            check=True,
-            cwd=os.getcwd()
-        )
+        # Run the command with configurable timeout
+        if timeout_seconds > 0:
+            logger.info(f"GPU {gpu_id} Job {job_id}: Running with {timeout_seconds}s timeout...")
+            result = subprocess.run(
+                cmd,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=os.getcwd(),
+                timeout=timeout_seconds
+            )
+        else:
+            logger.info(f"GPU {gpu_id} Job {job_id}: Running without timeout...")
+            result = subprocess.run(
+                cmd,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=os.getcwd()
+            )
         
         end_time = time.time()
         duration = end_time - start_time
@@ -125,6 +146,27 @@ def run_single_gpu_job(args: Dict[str, Any]) -> Dict[str, Any]:
             'output_path': output_path,
             'stdout': result.stdout,
             'stderr': result.stderr
+        }
+        
+    except subprocess.TimeoutExpired as e:
+        end_time = time.time()
+        duration = end_time - start_time
+        
+        logger.error(f"GPU {gpu_id} Job {job_id}: TIMEOUT after {duration:.2f}s ({timeout_seconds}s limit)")
+        logger.error(f"GPU {gpu_id} Job {job_id}: Command was: {' '.join(cmd)}")
+        
+        return {
+            'job_id': job_id,
+            'gpu_id': gpu_id,
+            'success': False,
+            'duration': duration,
+            'structures_requested': structures_for_this_gpu,
+            'structures_generated': 0,
+            'batches': batches_needed,
+            'output_path': output_path,
+            'error': f'Timeout after {timeout_seconds}s',
+            'stdout': '',
+            'stderr': 'Process timed out'
         }
         
     except subprocess.CalledProcessError as e:
@@ -294,6 +336,24 @@ Production Examples:
     --base_batch_size 32 \\
     --sampling_config_name "phase3_optimized" \\
     --enable_optimizations true
+
+  # Run without timeout (for long-running jobs)
+  python multi_gpu_inference.py \\
+    --output_base_path "results/no_timeout_test" \\
+    --pretrained_name "space_group" \\
+    --total_structures 32 \\
+    --num_gpus 2 \\
+    --timeout_seconds 0 \\
+    --properties_to_condition_on '{"space_group": "225"}'
+
+  # Run with custom timeout (30 minutes)
+  python multi_gpu_inference.py \\
+    --output_base_path "results/long_timeout_test" \\
+    --pretrained_name "chemical_system" \\
+    --total_structures 64 \\
+    --num_gpus 4 \\
+    --timeout_seconds 1800 \\
+    --properties_to_condition_on '{"chemical_system": "Si-O"}'
         """
     )
     
@@ -317,6 +377,8 @@ Production Examples:
                         help='Batch size per GPU (default: 16)')
     parser.add_argument('--max_workers', type=int, default=None,
                         help='Max concurrent processes (default: num_gpus)')
+    parser.add_argument('--timeout_seconds', type=int, default=600,
+                        help='Timeout for each GPU job in seconds (default: 600, 0 for no timeout)')
     
     # Sampling configuration
     parser.add_argument('--sampling_config_name', default='optimized_compatible',
@@ -507,6 +569,7 @@ Production Examples:
             'output_path': job_output_path,
             'structures_for_this_gpu': structures,
             'batch_size': args.base_batch_size,
+            'timeout_seconds': args.timeout_seconds,
             'mattergen_args': mattergen_args
         }
         

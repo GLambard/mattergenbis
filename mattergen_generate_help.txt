@@ -1,0 +1,175 @@
+/home/guillaume/Documents/Projects/LINK/Internships/Auguste/mattergenbis/.venv/lib/python3.10/site-packages/lightning_fabric/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  __import__("pkg_resources").declare_namespace(__name__)
+INFO: Showing help with the command 'generate.py -- --help'.
+
+NAME
+    generate.py - Evaluate diffusion model against molecular metrics.
+
+SYNOPSIS
+    generate.py OUTPUT_PATH <flags>
+
+DESCRIPTION
+    Evaluate diffusion model against molecular metrics.
+
+POSITIONAL ARGUMENTS
+    OUTPUT_PATH
+        Type: str
+        Path to output directory.
+
+FLAGS
+    --pretrained_name=PRETRAINED_NAME
+        Type: Optional[Optional]
+        Default: None
+    --model_path=MODEL_PATH
+        Type: Optional[str | None]
+        Default: None
+        Path to DiffusionLightningModule checkpoint directory.
+    -b, --batch_size=BATCH_SIZE
+        Type: int
+        Default: 64
+    -n, --num_batches=NUM_BATCHES
+        Type: int
+        Default: 1
+    --config_overrides=CONFIG_OVERRIDES
+        Type: Optional[list[str] | None]
+        Default: None
+        Overrides for the model config, e.g., `model.num_layers=3 model.hidden_dim=128`.
+    --checkpoint_epoch=CHECKPOINT_EPOCH
+        Type: Union
+        Default: 'last'
+    --properties_to_condition_on=PROPERTIES_TO_CONDITION_ON
+        Type: Optional[dict[str, typing.Union[int, float, typing.Sequence[str...
+        Default: None
+        Property value to draw conditional sampling with respect to. When this value is an empty dictionary (default), unconditional samples are drawn.
+    --sampling_config_path=SAMPLING_CONFIG_PATH
+        Type: Optional[str | None]
+        Default: None
+        Path to the sampling config file. (default: None, in which case we use `DEFAULT_SAMPLING_CONFIG_PATH` from explorers.common.utils.utils.py)
+    --sampling_config_name=SAMPLING_CONFIG_NAME
+        Type: str
+        Default: 'default'
+        Name of the sampling config (corresponds to `{sampling_config_path}/{sampling_config_name}.yaml` on disk). (default: default)
+    --sampling_config_overrides=SAMPLING_CONFIG_OVERRIDES
+        Type: Optional[list[str] | None]
+        Default: None
+        Overrides for the sampling config, e.g., `condition_loader_partial.batch_size=32`.
+    -r, --record_trajectories=RECORD_TRAJECTORIES
+        Type: bool
+        Default: True
+    --diffusion_guidance_factor=DIFFUSION_GUIDANCE_FACTOR
+        Type: Optional[float | None]
+        Default: None
+    --strict_checkpoint_loading=STRICT_CHECKPOINT_LOADING
+        Type: bool
+        Default: True
+        Whether to raise an exception when not all parameters from the checkpoint can be matched to the model.
+    -t, --target_compositions=TARGET_COMPOSITIONS
+        Type: Optional[list[dict[s...
+        Default: None
+        List of dictionaries with target compositions to condition on. Each dictionary should have the form `{element: number_of_atoms}`. If None, the target compositions are not conditioned on.
+    -g, --guidance=GUIDANCE
+        Type: Optional[dict | None]
+        Default: None
+    --diffusion_loss_weight=DIFFUSION_LOSS_WEIGHT
+        Type: float
+        Default: 1.0
+    --print_loss=PRINT_LOSS
+        Type: bool
+        Default: False
+    --enable_optimizations=ENABLE_OPTIMIZATIONS
+        Type: bool
+        Default: True
+    --enable_mixed_precision=ENABLE_MIXED_PRECISION
+        Type: bool
+        Default: True
+    --enable_model_compilation=ENABLE_MODEL_COMPILATION
+        Type: bool
+        Default: True
+    --enable_multi_gpu=ENABLE_MULTI_GPU
+        Type: bool
+        Default: True
+    --enable_graph_caching=ENABLE_GRAPH_CACHING
+        Type: bool
+        Default: True
+    --enable_gradient_checkpointing=ENABLE_GRADIENT_CHECKPOINTING
+        Type: bool
+        Default: False
+    --multi_gpu_strategy=MULTI_GPU_STRATEGY
+        Type: str
+        Default: 'auto'
+    --max_gpus=MAX_GPUS
+        Type: Optional[int | None]
+        Default: None
+    --max_memory_usage_gb=MAX_MEMORY_USAGE_GB
+        Type: Optional[float | None]
+        Default: None
+    --print_optimization_info=PRINT_OPTIMIZATION_INFO
+        Type: bool
+        Default: False
+    --enable_phase3_optimizations=ENABLE_PHASE3_OPTIMIZATIONS
+        Type: bool
+        Default: False
+    -o, --optimize_memory=OPTIMIZE_MEMORY
+        Type: bool
+        Default: False
+    --enable_advanced_caching=ENABLE_ADVANCED_CACHING
+        Type: bool
+        Default: False
+    -u, --use_intelligent_batching=USE_INTELLIGENT_BATCHING
+        Type: bool
+        Default: False
+    -h, --hardware_optimization_level=HARDWARE_OPTIMIZATION_LEVEL
+        Type: str
+        Default: 'auto'
+    --enable_phase4_features=ENABLE_PHASE4_FEATURES
+        Type: bool
+        Default: False
+    --enable_adaptive_sampling=ENABLE_ADAPTIVE_SAMPLING
+        Type: bool
+        Default: False
+    --enable_quality_metrics=ENABLE_QUALITY_METRICS
+        Type: bool
+        Default: False
+    -a, --adaptive_config_path=ADAPTIVE_CONFIG_PATH
+        Type: Optional[str | None]
+        Default: None
+    --quality_threshold=QUALITY_THRESHOLD
+        Type: float
+        Default: 0.7
+    --max_adaptation_iterations=MAX_ADAPTATION_ITERATIONS
+        Type: int
+        Default: 5
+    --enable_advanced_quality=ENABLE_ADVANCED_QUALITY
+        Type: bool
+        Default: False
+    --enable_quality_prediction=ENABLE_QUALITY_PREDICTION
+        Type: bool
+        Default: False
+    --enable_quality_reporting=ENABLE_QUALITY_REPORTING
+        Type: bool
+        Default: False
+    --enable_trend_analysis=ENABLE_TREND_ANALYSIS
+        Type: bool
+        Default: False
+    --quality_model_path=QUALITY_MODEL_PATH
+        Type: Optional[str | None]
+        Default: None
+    --quality_report_format=QUALITY_REPORT_FORMAT
+        Type: str
+        Default: 'json'
+    --enable_enterprise_monitoring=ENABLE_ENTERPRISE_MONITORING
+        Type: bool
+        Default: False
+    --enable_enterprise_dashboard=ENABLE_ENTERPRISE_DASHBOARD
+        Type: bool
+        Default: False
+    --enable_enterprise_analytics=ENABLE_ENTERPRISE_ANALYTICS
+        Type: bool
+        Default: False
+    --enterprise_config_path=ENTERPRISE_CONFIG_PATH
+        Type: Optional[str | None]
+        Default: None
+
+NOTES
+    You can also use flags syntax for POSITIONAL ARGUMENTS
+MODELS_PROJECT_ROOT: /home/guillaume/Documents/Projects/LINK/Internships/Auguste/mattergenbis/mattergen

@@ -19,7 +19,15 @@ MatterGen is a generative model for inorganic materials design across the period
 - [Installation](#installation)
 - [Get started with a pre-trained model](#get-started-with-a-pre-trained-model)
 - [Generating materials](#generating-materials)
+  - [Single-GPU Generation](#single-gpu-generation)
+  - [Multi-GPU Production Generation](#multi-gpu-production-generation-🚀)
+  - [High-Performance Generation](#⚡-high-performance-generation-new)
+  - [Property-conditioned generation](#property-conditioned-generation)
+  - [Advanced Features](#advanced-features-🚀)
+- [CLI Reference](#cli-reference)
 - [Evaluation](#evaluation)
+  - [Benchmarking and Validation Tools](#benchmarking-and-validation-tools-🔧)
+- [Troubleshooting](#troubleshooting-🔧)
 - [Train MatterGen yourself](#train-mattergen-yourself)
 - [Data release](#data-release)
 - [Citation](#citation)
@@ -79,17 +87,20 @@ git lfs pull -I checkpoints/<model_name> --exclude=""
 > The checkpoints provided were re-trained using this repository, i.e., are not identical to the ones used in the paper. Hence, results may slightly deviate from those in the publication. 
 
 ## Generating materials
-### Unconditional generation
+
+### Single-GPU Generation
+
+#### Unconditional generation
 To sample from the pre-trained base model, run the following command.
 ```bash
 export MODEL_NAME=mattergen_base
 export RESULTS_PATH=results/  # Samples will be written to this directory
 
 # generate batch_size * num_batches samples
-mattergen-generate $RESULTS_PATH --pretrained-name=$MODEL_NAME --batch_size=16 --num_batches 1
+python -m mattergen.scripts.generate $RESULTS_PATH --pretrained_name=$MODEL_NAME --batch_size=16 --num_batches=1
 
 # For faster generation with optimizations (recommended):
-mattergen-generate $RESULTS_PATH --pretrained-name=$MODEL_NAME --batch_size=64 --num_batches 1 --sampling_config_name=optimized --enable_optimizations=True
+python -m mattergen.scripts.generate $RESULTS_PATH --pretrained_name=$MODEL_NAME --batch_size=64 --num_batches=1 --sampling_config_name=optimized --enable_optimizations=True
 ```
 This script will write the following files into `$RESULTS_PATH`:
 * `generated_crystals_cif.zip`: a ZIP file containing a single `.cif` file per generated structure.
@@ -99,7 +110,79 @@ This script will write the following files into `$RESULTS_PATH`:
 > For best efficiency, increase the batch size to the largest your GPU can sustain without running out of memory.
 
 > [!NOTE]
-> To sample from a model you've trained yourself, replace `--pretrained-name=$MODEL_NAME` with `--model_path=$MODEL_PATH`, filling in your model's location for `$MODEL_PATH`.
+> To sample from a model you've trained yourself, replace `--pretrained_name=$MODEL_NAME` with `--model_path=$MODEL_PATH`, filling in your model's location for `$MODEL_PATH`.
+
+### Multi-GPU Production Generation 🚀
+
+MatterGen includes a **production-ready multi-GPU inference launcher** that can efficiently distribute structure generation across multiple GPUs with advanced features like timeout control, load balancing, and comprehensive monitoring.
+
+#### Quick Start: Multi-GPU Generation
+```bash
+# Generate 256 structures on 4 GPUs with production settings
+python multi_gpu_inference.py \
+  --output_base_path "results/production_256_4gpu" \
+  --pretrained_name "mattergen_base" \
+  --total_structures 256 \
+  --num_gpus 4 \
+  --base_batch_size 16 \
+  --sampling_config_name "optimized_compatible" \
+  --enable_optimizations true \
+  --enable_model_compilation true \
+  --enable_graph_caching true \
+  --record_trajectories false
+
+# Large-scale production run with 1024 structures
+python multi_gpu_inference.py \
+  --output_base_path "results/large_scale_1024" \
+  --pretrained_name "mattergen_base" \
+  --total_structures 1024 \
+  --num_gpus 8 \
+  --base_batch_size 32 \
+  --enable_optimizations true
+```
+
+#### Multi-GPU Features
+
+- **Automatic GPU Detection**: Auto-detects all available GPUs or use `--num_gpus` to specify
+- **Load Balancing**: Intelligently distributes structures across GPUs
+- **Timeout Control**: Configurable timeout per GPU job (`--timeout_seconds`, 0 for no timeout)
+- **Result Consolidation**: Automatically merges results from all GPUs
+- **Performance Monitoring**: Detailed throughput and GPU utilization metrics
+- **Error Handling**: Robust error handling with detailed logging
+
+#### Multi-GPU Timeout Configuration
+```bash
+# Run without timeout (for long-running jobs)
+python multi_gpu_inference.py \
+  --output_base_path "results/no_timeout_test" \
+  --pretrained_name "space_group" \
+  --total_structures 32 \
+  --num_gpus 2 \
+  --timeout_seconds 0 \
+  --properties_to_condition_on '{"space_group": "225"}'
+
+# Run with custom timeout (30 minutes)
+python multi_gpu_inference.py \
+  --output_base_path "results/long_timeout_test" \
+  --pretrained_name "chemical_system" \
+  --total_structures 64 \
+  --num_gpus 4 \
+  --timeout_seconds 1800 \
+  --properties_to_condition_on '{"chemical_system": "Si-O"}'
+```
+
+#### Multi-GPU Output Structure
+```
+results/
+├── multi_gpu_summary.json          # Comprehensive performance summary
+├── gpu_0/                          # Results from GPU 0
+│   ├── generated_crystals_cif.zip
+│   └── generated_crystals.extxyz
+├── gpu_1/                          # Results from GPU 1
+│   ├── generated_crystals_cif.zip
+│   └── generated_crystals.extxyz
+└── multi_gpu_inference.log         # Detailed execution log
+```
 
 ### ⚡ High-Performance Generation (NEW)
 
@@ -108,8 +191,8 @@ MatterGen now includes advanced performance optimizations that can significantly
 #### Quick Start: Optimized Generation
 ```bash
 # Fast generation with balanced speed/quality (6-8x speedup)
-mattergen-generate $RESULTS_PATH \
-  --pretrained-name=$MODEL_NAME \
+python -m mattergen.scripts.generate $RESULTS_PATH \
+  --pretrained_name=$MODEL_NAME \
   --batch_size=64 \
   --sampling_config_name=optimized \
   --enable_optimizations=True \
@@ -117,8 +200,8 @@ mattergen-generate $RESULTS_PATH \
   --enable_model_compilation=True
 
 # Ultra-fast generation for rapid prototyping (15-20x speedup)
-mattergen-generate $RESULTS_PATH \
-  --pretrained-name=$MODEL_NAME \
+python -m mattergen.scripts.generate $RESULTS_PATH \
+  --pretrained_name=$MODEL_NAME \
   --batch_size=128 \
   --sampling_config_name=fast \
   --enable_optimizations=True \
@@ -141,6 +224,8 @@ Three sampling configurations are available:
 - `--enable_optimizations=True`: Enable all performance optimizations
 - `--enable_mixed_precision=True`: Use FP16 for ~2x speedup and 50% memory reduction
 - `--enable_model_compilation=True`: Use PyTorch 2.0+ compilation for additional 1.2-1.8x speedup
+- `--enable_multi_gpu=True`: Enable multi-GPU support (single script only)
+- `--enable_graph_caching=True`: Enable graph caching for faster subsequent runs
 - `--sampling_config_name=optimized|fast`: Use reduced diffusion steps
 - `--record_trajectories=False`: Disable trajectory recording to save memory and I/O
 
@@ -165,7 +250,16 @@ export MODEL_NAME=dft_mag_density
 export RESULTS_PATH="results/$MODEL_NAME/"  # Samples will be written to this directory, e.g., `results/dft_mag_density`
 
 # Generate conditional samples with a target magnetic density of 0.15
-mattergen-generate $RESULTS_PATH --pretrained-name=$MODEL_NAME --batch_size=16 --properties_to_condition_on="{'dft_mag_density': 0.15}" --diffusion_guidance_factor=2.0
+python -m mattergen.scripts.generate $RESULTS_PATH --pretrained_name=$MODEL_NAME --batch_size=16 --properties_to_condition_on='{"dft_mag_density": 0.15}' --diffusion_guidance_factor=2.0
+
+# Multi-GPU conditional generation
+python multi_gpu_inference.py \
+  --output_base_path="results/conditional_multiGPU" \
+  --pretrained_name=$MODEL_NAME \
+  --total_structures=128 \
+  --num_gpus=4 \
+  --properties_to_condition_on='{"dft_mag_density": 0.15}' \
+  --diffusion_guidance_factor=2.0
 ```
 > [!TIP]
 > The argument `--diffusion-guidance-factor` corresponds to the $\gamma$ parameter in [classifier-free diffusion guidance](https://sander.ai/2022/05/26/guidance.html). Setting it to zero corresponds to unconditional generation, and increasing it further tends to produce samples which adhere more to the input property values, though at the expense of diversity and realism of samples.
@@ -176,15 +270,172 @@ Adapt the following command to your specific needs:
 ```bash
 export MODEL_NAME=chemical_system_energy_above_hull
 export RESULTS_PATH="results/$MODEL_NAME/"  # Samples will be written to this directory, e.g., `results/dft_mag_density`
-mattergen-generate $RESULTS_PATH --pretrained-name=$MODEL_NAME --batch_size=16 --properties_to_condition_on="{'energy_above_hull': 0.05, 'chemical_system': 'Li-O'}" --diffusion_guidance_factor=2.0
+python -m mattergen.scripts.generate $RESULTS_PATH --pretrained_name=$MODEL_NAME --batch_size=16 --properties_to_condition_on='{"energy_above_hull": 0.05, "chemical_system": "Li-O"}' --diffusion_guidance_factor=2.0
 ```
+
+### Advanced Features 🚀
+
+#### Adaptive Sampling and Quality Metrics (Phase 4)
+MatterGen includes advanced adaptive sampling capabilities that can automatically adjust generation parameters based on quality feedback:
+
+```bash
+# Enable adaptive sampling with quality metrics
+python -m mattergen.scripts.generate $RESULTS_PATH \
+  --pretrained_name=$MODEL_NAME \
+  --batch_size=32 \
+  --enable_phase4_features=True \
+  --enable_adaptive_sampling=True \
+  --enable_quality_metrics=True \
+  --quality_threshold=0.8 \
+  --max_adaptation_iterations=10
+
+# Multi-GPU adaptive sampling
+python multi_gpu_inference.py \
+  --output_base_path="results/adaptive_multiGPU" \
+  --pretrained_name=$MODEL_NAME \
+  --total_structures=256 \
+  --num_gpus=4 \
+  --enable_phase4_features=true \
+  --enable_adaptive_sampling=true \
+  --enable_quality_metrics=true
+```
+
+#### Enterprise Features (Phase 4.3)
+For enterprise deployments, MatterGen provides monitoring, analytics, and dashboard capabilities:
+
+```bash
+# Enterprise monitoring and analytics
+python multi_gpu_inference.py \
+  --output_base_path="results/enterprise_demo" \
+  --pretrained_name=$MODEL_NAME \
+  --total_structures=128 \
+  --num_gpus=2 \
+  --enable_enterprise_monitoring=true \
+  --enable_enterprise_analytics=true \
+  --enable_enterprise_dashboard=true \
+  --enable_quality_reporting=true
+```
+
+**Enterprise Features:**
+- **Real-time monitoring**: System metrics, GPU utilization, performance tracking
+- **Advanced analytics**: Quality scoring, trend analysis, performance recommendations
+- **Web dashboard**: Interactive visualization and real-time updates
+- **Quality reporting**: Comprehensive quality assessment with multiple output formats
+
+#### Advanced Quality Analysis
+```bash
+# Advanced quality prediction and reporting
+python -m mattergen.scripts.generate $RESULTS_PATH \
+  --pretrained_name=$MODEL_NAME \
+  --batch_size=32 \
+  --enable_advanced_quality=True \
+  --enable_quality_prediction=True \
+  --enable_quality_reporting=True \
+  --enable_trend_analysis=True \
+  --quality_report_format=html
+```
+
+## CLI Reference 📖
+
+### Main Generation Script
+```bash
+python -m mattergen.scripts.generate OUTPUT_PATH [OPTIONS]
+```
+
+**Key Options:**
+- `--pretrained_name`: Model name (e.g., "mattergen_base", "space_group")
+- `--model_path`: Path to custom model checkpoint
+- `--batch_size`: Batch size (default: 64)
+- `--num_batches`: Number of batches (default: 1)
+- `--properties_to_condition_on`: JSON string for conditioning
+- `--sampling_config_name`: Sampling configuration ("default", "optimized", "fast")
+- `--enable_optimizations`: Enable performance optimizations (default: True)
+- `--enable_mixed_precision`: Enable FP16 (default: True)
+- `--enable_model_compilation`: Enable PyTorch compilation (default: True)
+- `--enable_multi_gpu`: Enable multi-GPU support (default: True)
+- `--record_trajectories`: Record generation trajectories (default: True)
+
+### Multi-GPU Inference Script
+```bash
+python multi_gpu_inference.py [OPTIONS]
+```
+
+**Required Options:**
+- `--output_base_path`: Base output directory
+- `--total_structures`: Total structures to generate
+- `--pretrained_name` OR `--model_path`: Model specification
+
+**Multi-GPU Options:**
+- `--num_gpus`: Number of GPUs (default: auto-detect)
+- `--base_batch_size`: Batch size per GPU (default: 16)
+- `--timeout_seconds`: Timeout per job (default: 600, 0 for no timeout)
+- `--max_workers`: Max concurrent processes
+
+**Advanced Options:**
+- `--enable_phase4_features`: Enable adaptive sampling framework
+- `--enable_adaptive_sampling`: Enable intelligent adaptation
+- `--enable_quality_metrics`: Enable quality assessment
+- `--enable_enterprise_monitoring`: Enable enterprise monitoring
+- `--quality_threshold`: Quality filtering threshold (default: 0.7)
+
+### Supported Model Names
+- `mattergen_base`: Unconditional base model
+- `chemical_system`: Chemical system conditioning
+- `space_group`: Space group conditioning  
+- `dft_mag_density`: Magnetic density conditioning
+- `dft_band_gap`: Band gap conditioning
+- `ml_bulk_modulus`: Bulk modulus conditioning
+- `dft_mag_density_hhi_score`: Joint mag density + HHI conditioning
+- `chemical_system_energy_above_hull`: Joint chemical system + energy conditioning
+
+### Sampling Configurations
+- `default`: Full 1000 steps (highest quality)
+- `optimized`: 250 steps (balanced speed/quality)
+- `fast`: 100 steps (fastest generation)
+- `optimized_compatible`: Multi-GPU optimized version
+
 ## Evaluation
 
+### Quick Evaluation
 Once you have generated a list of structures contained in `$RESULTS_PATH` (either using MatterGen or another method), you can relax the structures using the default MatterSim machine learning force field (see [repository](https://github.com/microsoft/mattersim)) and compute novelty, uniqueness, stability (using energy estimated by MatterSim), and other metrics via the following command:
 ```bash
 git lfs pull -I data-release/alex-mp/reference_MP2020correction.gz --exclude=""  # first download the reference dataset from Git LFS
-mattergen-evaluate --structures_path=$RESULTS_PATH --relax=True --structure_matcher='disordered' --save_as="$RESULTS_PATH/metrics.json"
+python -m mattergen.evaluation.main --structures_path=$RESULTS_PATH --relax=True --structure_matcher='disordered' --save_as="$RESULTS_PATH/metrics.json"
 ```
+
+### Benchmarking and Validation Tools 🔧
+
+MatterGen includes a comprehensive suite of benchmarking and validation tools located in `mattergen/benchmarks/`:
+
+#### Comprehensive Benchmark Suite
+```bash
+# Run comprehensive benchmarks
+python -m mattergen.benchmarks.comprehensive_benchmark_suite \
+  --output_path="results/benchmarks" \
+  --num_structures=100 \
+  --models=mattergen_base,space_group \
+  --enable_quality_analysis=True
+
+# Validate crystalline accuracy
+python -m mattergen.benchmarks.crystalline_accuracy_validator \
+  --structures_path="results/generated_structures" \
+  --reference_path="data-release/alex-mp/" \
+  --output_report="validation_report.json"
+```
+
+#### Benchmark Analysis and Plotting
+The project includes Jupyter notebooks for analyzing benchmark results:
+```bash
+# Generate benchmark plots (similar to paper figures)
+jupyter notebook benchmark/plot_benchmark_results.ipynb
+```
+
+**Available Benchmark Metrics:**
+- **S.U.N. (Stability, Uniqueness, Novelty)** analysis
+- **RMSD (Root Mean Square Deviation)** comparison
+- **Crystalline accuracy validation**
+- **Property distribution analysis**
+- **Performance throughput metrics**
 This script will write `metrics.json` containing the metric results to `$RESULTS_PATH` and will print it to your console.
 > [!IMPORTANT]
 > The evaluation script in this repository uses [MatterSim](https://github.com/microsoft/mattersim), a machine-learning force field (MLFF) to relax structures and assess their stability via MatterSim's predicted energies. While this is orders of magnitude faster than evaluation via density functional theory (DFT), it doesn't require a license to run the evaluation, and typically has a high accuracy, there are important caveats. (1) In the MatterGen publication we use DFT to evaluate structures generated by all models and baselines; (2) DFT is more accurate and reliable, particularly in less common chemical systems. Thus, evaluation results obtained with this evaluation code may give different results than DFT evaluation; and we recommend to confirm results obtained with MLFFs with DFT before drawing conclusions. 
@@ -196,7 +447,7 @@ This script will write `metrics.json` containing the metric results to `$RESULTS
 If, instead, you have relaxed the structures and obtained the relaxed total energies via another mean (e.g., DFT), you can evaluate the metrics via:
 ```bash
 git lfs pull -I data-release/alex-mp/reference_MP2020correction.gz --exclude=""  # first download the reference dataset from Git LFS
-mattergen-evaluate --structures_path=$RESULTS_PATH --energies_path='energies.npy' --relax=False --structure_matcher='disordered' --save_as='metrics'
+python -m mattergen.evaluation.main --structures_path=$RESULTS_PATH --energies_path='energies.npy' --relax=False --structure_matcher='disordered' --save_as='metrics'
 ```
 This script will try to read structures from disk in the following precedence order:
 * If `$RESULTS_PATH` points to a `.xyz` or `.extxyz` file, it will read it directly and assume each frame is a different structure.
@@ -205,9 +456,9 @@ This script will try to read structures from disk in the following precedence or
 
 Here, we expect `energies.npy` to be a numpy array with the entries being `float` energies in the same order as the structures read from `$RESULTS_PATH`.
 
-If you want to save the relaxed structures, toghether with their energies, forces, and stresses, add `--structures_output_path=YOUR_PATH` to the script call, like so:
+If you want to save the relaxed structures, together with their energies, forces, and stresses, add `--structures_output_path=YOUR_PATH` to the script call, like so:
 ```bash
-mattergen-evaluate --structures_path=$RESULTS_PATH --relax=True --structure_matcher='disordered' --save_as='metrics' --structures_output_path="relaxed_structures.extxyz"
+python -m mattergen.evaluation.main --structures_path=$RESULTS_PATH --relax=True --structure_matcher='disordered' --save_as='metrics' --structures_output_path="relaxed_structures.extxyz"
 ```
 ### Benchmark
 In [`plot_benchmark_results.ipynb`](benchmark/plot_benchmark_results.ipynb) we provide a Jupyter notebook to generate figures like Figs. 2e and 2f in the paper. We further provide the resulting metrics of analyzing samples generated by several baselines under [`benchmark/metrics`](benchmark/metrics). You can add your own model's results by copying the metrics JSON file resulting from `mattergen-evaluate` into the same folder. Note, again, that these results were obtained via MatterSim relaxation and energies, so results will differ from those obtained via DFT (e.g., as those in the paper).
@@ -215,6 +466,74 @@ In [`plot_benchmark_results.ipynb`](benchmark/plot_benchmark_results.ipynb) we p
     <img src="benchmark/figures/metrics_sun.png" alt="S.U.N. plot" width="410"/>
     <img src="benchmark/figures/metrics_rmsd.png" alt="RMSD plot" width="410"/>
 </p>
+
+## Troubleshooting 🔧
+
+### Multi-GPU Issues
+**Problem**: Multi-GPU jobs hang or timeout
+```bash
+# Solution 1: Increase timeout or disable it
+python multi_gpu_inference.py \
+  --timeout_seconds 0  # Disable timeout
+  # ... other args
+
+# Solution 2: Reduce batch size
+python multi_gpu_inference.py \
+  --base_batch_size 8  # Reduce from default 16
+  # ... other args
+```
+
+**Problem**: CUDA out of memory errors
+```bash
+# Solution: Reduce batch size and enable memory optimizations
+python multi_gpu_inference.py \
+  --base_batch_size 4 \
+  --enable_optimizations=true \
+  --enable_mixed_precision=false  # Disable if causing instability
+  # ... other args
+```
+
+### Property Conditioning Issues
+**Problem**: AssertionError about unsupported conditioning fields
+```bash
+# Check supported properties for your model
+python discover_conditioning_fields.py --pretrained_name your_model_name
+
+# Use appropriate model for conditioning
+python multi_gpu_inference.py \
+  --pretrained_name space_group \  # For space group conditioning
+  --properties_to_condition_on '{"space_group": "225"}'
+```
+
+### Performance Optimization
+**Problem**: Slow generation speed
+```bash
+# Enable all optimizations
+python -m mattergen.scripts.generate $RESULTS_PATH \
+  --enable_optimizations=True \
+  --enable_model_compilation=True \
+  --enable_graph_caching=True \
+  --sampling_config_name=optimized \
+  --batch_size=64  # Increase batch size if memory allows
+
+# For multi-GPU
+python multi_gpu_inference.py \
+  --enable_optimizations=true \
+  --enable_model_compilation=true \
+  --base_batch_size=32 \
+  --sampling_config_name=optimized_compatible
+```
+
+### Environment Issues
+**Problem**: Package import errors
+```bash
+# Reinstall environment
+source .venv/bin/activate
+pip install -e .
+
+# For enterprise features, install additional dependencies
+pip install flask flask-socketio plotly dash
+```
 
 ### Evaluate using your own reference dataset
 
@@ -262,7 +581,7 @@ You can run the following command for `mp_20`:
 # Download file from LFS
 git lfs pull -I data-release/mp-20/ --exclude=""
 unzip data-release/mp-20/mp_20.zip -d datasets
-csv-to-dataset --csv-folder datasets/mp_20/ --dataset-name mp_20 --cache-folder datasets/cache
+python -m mattergen.data.csv_to_dataset --csv-folder datasets/mp_20/ --dataset-name mp_20 --cache-folder datasets/cache
 ```
 You will get preprocessed data files in `datasets/cache/mp_20`.
 
@@ -271,7 +590,7 @@ To preprocess our larger `alex_mp_20` dataset, run:
 # Download file from LFS
 git lfs pull -I data-release/alex-mp/alex_mp_20.zip --exclude=""
 unzip data-release/alex-mp/alex_mp_20.zip -d datasets
-csv-to-dataset --csv-folder datasets/alex_mp_20/ --dataset-name alex_mp_20 --cache-folder datasets/cache
+python -m mattergen.data.csv_to_dataset --csv-folder datasets/alex_mp_20/ --dataset-name alex_mp_20 --cache-folder datasets/cache
 ```
 This will take some time (~1h). You will get preprocessed data files in `datasets/cache/alex_mp_20`.
 
@@ -279,7 +598,7 @@ This will take some time (~1h). You will get preprocessed data files in `dataset
 You can train the MatterGen base model on `mp_20` using the following command.
 
 ```bash
-mattergen-train data_module=mp_20 ~trainer.logger
+python -m mattergen.train data_module=mp_20 ~trainer.logger
 ```
 > [!NOTE]
 > For Apple Silicon training, add `~trainer.strategy trainer.accelerator=mps` to the above command.
@@ -293,7 +612,7 @@ The validation loss (`loss_val`) should reach 0.4 after 360 epochs (about 80k st
 
 To train the MatterGen base model on `alex_mp_20`, use the following command:
 ```bash
-mattergen-train data_module=alex_mp_20 ~trainer.logger trainer.accumulate_grad_batches=4
+python -m mattergen.train data_module=alex_mp_20 ~trainer.logger trainer.accumulate_grad_batches=4
 ```
 > [!NOTE]
 > For Apple Silicon training, add `~trainer.strategy trainer.accelerator=mps` to the above command.
@@ -313,7 +632,7 @@ You can fine-tune the MatterGen base model using the following command.
 
 ```bash
 export PROPERTY=dft_mag_density
-mattergen-finetune adapter.pretrained_name=mattergen_base data_module=mp_20 +lightning_module/diffusion_module/model/property_embeddings@adapter.adapter.property_embeddings_adapt.$PROPERTY=$PROPERTY ~trainer.logger data_module.properties=["$PROPERTY"]
+python -m mattergen.finetune adapter.pretrained_name=mattergen_base data_module=mp_20 +lightning_module/diffusion_module/model/property_embeddings@adapter.adapter.property_embeddings_adapt.$PROPERTY=$PROPERTY ~trainer.logger data_module.properties=["$PROPERTY"]
 ```
 `dft_mag_density` denotes the target property for fine-tuning. You can also fine-tune a model you've trained yourself by **replacing** `adapter.pretrained_name=mattergen_base` with `adapter.model_path=$MODEL_PATH`, filling in your model's location for `$MODEL_PATH`.
 > [!NOTE]
@@ -330,7 +649,7 @@ You can also fine-tune MatterGen on multiple properties. For instance, to fine-t
 export PROPERTY1=dft_mag_density
 export PROPERTY2=dft_band_gap 
 export MODEL_NAME=mattergen_base
-mattergen-finetune adapter.pretrained_name=$MODEL_NAME data_module=mp_20 +lightning_module/diffusion_module/model/property_embeddings@adapter.adapter.property_embeddings_adapt.$PROPERTY1=$PROPERTY1 +lightning_module/diffusion_module/model/property_embeddings@adapter.adapter.property_embeddings_adapt.$PROPERTY2=$PROPERTY2 ~trainer.logger data_module.properties=["$PROPERTY1","$PROPERTY2"]
+python -m mattergen.finetune adapter.pretrained_name=$MODEL_NAME data_module=mp_20 +lightning_module/diffusion_module/model/property_embeddings@adapter.adapter.property_embeddings_adapt.$PROPERTY1=$PROPERTY1 +lightning_module/diffusion_module/model/property_embeddings@adapter.adapter.property_embeddings_adapt.$PROPERTY2=$PROPERTY2 ~trainer.logger data_module.properties=["$PROPERTY1","$PROPERTY2"]
 ```
 > [!TIP]
 > Add more properties analogously by adding these overrides:
@@ -344,7 +663,7 @@ mattergen-finetune adapter.pretrained_name=$MODEL_NAME data_module=mp_20 +lightn
 You may also fine-tune MatterGen on your own property data. Essentially what you need is a property value (typically `float`) for a subset of the data you want to train on (e.g., `alex_mp_20`). Proceed as follows:
 1. Add the name of your property to the `PROPERTY_SOURCE_IDS` list inside [`mattergen/common/utils/globals.py`](mattergen/common/utils/globals.py).
 2. Add a new column with this name to the dataset(s) you want to train on, e.g., `datasets/alex_mp_20/train.csv` and `datasets/alex_mp_20/val.csv` (requires you to have followed the [pre-processing steps](#pre-process-a-dataset-for-training)).
-3. Re-run the CSV to dataset script `csv-to-dataset --csv-folder datasets/<MY_DATASET>/ --dataset-name <MY_DATASET> --cache-folder datasets/cache`, substituting your dataset name for `MY_DATASET`.
+3. Re-run the CSV to dataset script `python -m mattergen.data.csv_to_dataset --csv-folder datasets/<MY_DATASET>/ --dataset-name <MY_DATASET> --cache-folder datasets/cache`, substituting your dataset name for `MY_DATASET`.
 4. Add a `<your_property>.yaml` config file to [`mattergen/conf/lightning_module/diffusion_module/model/property_embeddings`](mattergen/conf/lightning_module/diffusion_module/model/property_embeddings). If you are adding a float-valued property, you may copy an existing configuration, e.g., [`dft_mag_density.yaml`](mattergen/conf/lightning_module/diffusion_module/model/property_embeddings/dft_mag_density.yaml). More complicated properties will require you to create your own custom `PropertyEmbedding` subclass, e.g., see the [`space_group`](mattergen/conf/lightning_module/diffusion_module/model/property_embeddings/space_group.yaml) or [`chemical_system`](mattergen/conf/lightning_module/diffusion_module/model/property_embeddings/chemical_system.yaml) configs.
 5. Follow the [instructions for fine-tuning](#fine-tuning-on-property-data) and reference your own property in the same way as we used the existing properties like `dft_mag_density`.
 
